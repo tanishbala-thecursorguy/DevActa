@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { mockGames } from "../data/mockData";
 import { ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 
