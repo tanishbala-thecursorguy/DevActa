@@ -55,6 +55,18 @@ const INITIAL_GHOSTS = [
   { x: 13, y: 7, color: 'orange', speed: 1 },
 ];
 
+// Pinball game constants
+const PINBALL_WIDTH = 400;
+const PINBALL_HEIGHT = 600;
+const PINBALL_BALL_RADIUS = 10;
+const PINBALL_FLIPPER_LENGTH = 80;
+
+const PINBALL_BUMPERS = [
+  { x: 100, y: 150, r: 20, score: 10 },
+  { x: 300, y: 200, r: 20, score: 10 },
+  { x: 200, y: 100, r: 20, score: 20 },
+];
+
 interface ArcadeGamesPageProps {
   onGameSelect?: (gameId: number, gameTitle: string) => void;
 }
@@ -63,7 +75,7 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [coins, setCoins] = useState(5);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentGameType, setCurrentGameType] = useState<string>('');
+  const [currentGameType, setCurrentGameType] = useState<'snake' | 'tetris' | 'pac-man' | 'pinball'>('snake');
   
   // Snake game state
   const [snake, setSnake] = useState([{ x: 10, y: 10 }]);
@@ -82,6 +94,12 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   const [ghosts, setGhosts] = useState(INITIAL_GHOSTS);
   const [level, setLevel] = useState(1);
   const [pelletsCollected, setPelletsCollected] = useState(0);
+  
+  // Pinball game state
+  const [pinballBall, setPinballBall] = useState({ x: PINBALL_WIDTH / 2, y: PINBALL_HEIGHT - 30, vx: 2, vy: -5 });
+  const [leftFlipper, setLeftFlipper] = useState(false);
+  const [rightFlipper, setRightFlipper] = useState(false);
+  const pinballCanvasRef = useRef<HTMLCanvasElement>(null);
   
   // Common game state
   const [gameOver, setGameOver] = useState(false);
@@ -359,6 +377,146 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     return () => clearInterval(ghostInterval);
   }, [isPlaying, gameOver, currentGameType, pacmanPos, ghosts, pacmanMap, level]);
 
+  // Pinball helper functions
+  const pinballDraw = (ctx: CanvasRenderingContext2D) => {
+    ctx.clearRect(0, 0, PINBALL_WIDTH, PINBALL_HEIGHT);
+    
+    // Draw background
+    ctx.fillStyle = '#111';
+    ctx.fillRect(0, 0, PINBALL_WIDTH, PINBALL_HEIGHT);
+    
+    // Draw ball
+    ctx.beginPath();
+    ctx.arc(pinballBall.x, pinballBall.y, PINBALL_BALL_RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle = "#FFD700";
+    ctx.fill();
+    ctx.strokeStyle = "#FFA500";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.closePath();
+
+    // Draw bumpers
+    PINBALL_BUMPERS.forEach(b => {
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      ctx.fillStyle = "#FF0000";
+      ctx.fill();
+      ctx.strokeStyle = "#FF6666";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.closePath();
+    });
+
+    // Draw flippers
+    ctx.beginPath();
+    ctx.moveTo(PINBALL_WIDTH / 2 - 60, PINBALL_HEIGHT - 30);
+    ctx.lineTo(PINBALL_WIDTH / 2 - 60 + (leftFlipper ? 40 : 0), PINBALL_HEIGHT - 50);
+    ctx.strokeStyle = "#00FFFF";
+    ctx.lineWidth = 8;
+    ctx.stroke();
+    ctx.closePath();
+
+    ctx.beginPath();
+    ctx.moveTo(PINBALL_WIDTH / 2 + 60, PINBALL_HEIGHT - 30);
+    ctx.lineTo(PINBALL_WIDTH / 2 + 60 - (rightFlipper ? 40 : 0), PINBALL_HEIGHT - 50);
+    ctx.strokeStyle = "#00FFFF";
+    ctx.lineWidth = 8;
+    ctx.stroke();
+    ctx.closePath();
+
+    // Draw walls
+    ctx.strokeStyle = "#4169E1";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(PINBALL_WIDTH, 0);
+    ctx.lineTo(PINBALL_WIDTH, PINBALL_HEIGHT);
+    ctx.lineTo(0, PINBALL_HEIGHT);
+    ctx.lineTo(0, 0);
+    ctx.stroke();
+    ctx.closePath();
+
+    // Score display
+    ctx.font = "20px Arial";
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText("Score: " + score, 10, 30);
+  };
+
+  const pinballUpdate = () => {
+    let newBall = { ...pinballBall };
+
+    // Gravity
+    newBall.vy += 0.2;
+
+    newBall.x += newBall.vx;
+    newBall.y += newBall.vy;
+
+    // Wall collision
+    if (newBall.x + PINBALL_BALL_RADIUS > PINBALL_WIDTH || newBall.x - PINBALL_BALL_RADIUS < 0) {
+      newBall.vx = -newBall.vx;
+    }
+    if (newBall.y - PINBALL_BALL_RADIUS < 0) {
+      newBall.vy = -newBall.vy;
+    }
+
+    // Flipper bounce
+    if (
+      (newBall.y + PINBALL_BALL_RADIUS >= PINBALL_HEIGHT - 30 &&
+        newBall.x >= PINBALL_WIDTH / 2 - 60 &&
+        newBall.x <= PINBALL_WIDTH / 2 - 20 &&
+        leftFlipper) ||
+      (newBall.y + PINBALL_BALL_RADIUS >= PINBALL_HEIGHT - 30 &&
+        newBall.x >= PINBALL_WIDTH / 2 + 20 &&
+        newBall.x <= PINBALL_WIDTH / 2 + 60 &&
+        rightFlipper)
+    ) {
+      newBall.vy = -Math.abs(newBall.vy) - 2;
+      newBall.vx += newBall.x < PINBALL_WIDTH / 2 ? -2 : 2;
+    }
+
+    // Bumper collision
+    PINBALL_BUMPERS.forEach(b => {
+      const dx = newBall.x - b.x;
+      const dy = newBall.y - b.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < PINBALL_BALL_RADIUS + b.r) {
+        const angle = Math.atan2(dy, dx);
+        newBall.vx = Math.cos(angle) * 5;
+        newBall.vy = Math.sin(angle) * 5;
+        setScore(prev => prev + b.score);
+      }
+    });
+
+    // Floor collision (reset)
+    if (newBall.y - PINBALL_BALL_RADIUS > PINBALL_HEIGHT) {
+      newBall = { x: PINBALL_WIDTH / 2, y: PINBALL_HEIGHT - 30, vx: 2, vy: -5 };
+    }
+
+    setPinballBall(newBall);
+
+    if (pinballCanvasRef.current) {
+      const ctx = pinballCanvasRef.current.getContext("2d");
+      if (ctx) pinballDraw(ctx);
+    }
+  };
+
+  // Pinball game logic
+  useEffect(() => {
+    if (!isPlaying || gameOver || currentGameType !== 'pinball') return;
+
+    // Initialize canvas
+    if (pinballCanvasRef.current) {
+      const ctx = pinballCanvasRef.current.getContext("2d");
+      if (ctx) pinballDraw(ctx);
+    }
+
+    const pinballInterval = setInterval(() => {
+      pinballUpdate();
+    }, 20);
+
+    return () => clearInterval(pinballInterval);
+  }, [isPlaying, gameOver, currentGameType, pinballBall, leftFlipper, rightFlipper]);
+
   const navigateLeft = () => {
     setCurrentIndex((prev) => (prev === 0 ? mockGames.length - 1 : prev - 1));
   };
@@ -377,7 +535,7 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
       setGameOver(false);
       setScore(0);
       setPlayTime(0);
-      setCurrentGameType(gameType);
+      setCurrentGameType(gameType as 'snake' | 'tetris' | 'pac-man' | 'pinball');
       
       // Initialize game-specific state
       if (gameType === 'snake') {
@@ -393,6 +551,10 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
         setGhosts(INITIAL_GHOSTS);
         setLevel(1);
         setPelletsCollected(0);
+      } else if (gameType === 'pinball') {
+        setPinballBall({ x: PINBALL_WIDTH / 2, y: PINBALL_HEIGHT - 30, vx: 2, vy: -5 });
+        setLeftFlipper(false);
+        setRightFlipper(false);
       }
     }
   };
@@ -437,6 +599,13 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
           } else if (e.key === "ArrowRight") {
             pacmanMove(1, 0);
           }
+        } else if (currentGameType === 'pinball') {
+          // Pinball controls
+          if (e.key === "ArrowLeft") {
+            setLeftFlipper(true);
+          } else if (e.key === "ArrowRight") {
+            setRightFlipper(true);
+          }
         }
       } else {
         // Menu navigation
@@ -461,6 +630,24 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     setScore(0);
     setPlayTime(0);
   };
+
+  // Pinball flipper release
+  useEffect(() => {
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (isPlaying && currentGameType === 'pinball') {
+        if (e.key === "ArrowLeft") {
+          setLeftFlipper(false);
+        } else if (e.key === "ArrowRight") {
+          setRightFlipper(false);
+        }
+      }
+    };
+
+    document.addEventListener("keyup", handleKeyUp);
+    return () => {
+      document.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [isPlaying, currentGameType]);
 
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -737,6 +924,31 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
         })}
       </div>
     )}
+
+                      {/* Pinball Game */}
+                      {currentGameType === 'pinball' && (
+                        <div className="flex flex-col items-center justify-center">
+                          <canvas 
+                            ref={pinballCanvasRef} 
+                            width={PINBALL_WIDTH} 
+                            height={PINBALL_HEIGHT} 
+                            style={{ 
+                              backgroundColor: "#111", 
+                              border: "3px solid #4169E1",
+                              borderRadius: "8px",
+                              boxShadow: "0 0 20px #4169E1"
+                            }} 
+                          />
+                          <div className="mt-4 text-center">
+                            <div className="pixel-text text-sm neon-text-cyan mb-2">
+                              LEFT/RIGHT ARROWS: FLIPPERS
+                            </div>
+                            <div className="pixel-text text-xs neon-text-yellow">
+                              Hit bumpers for points! Keep the ball in play!
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Game Over Overlay */}
                       {gameOver && (
@@ -793,6 +1005,11 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
                           ARROW KEYS: MOVE  •  COLLECT PELLETS  •  AVOID GHOSTS
                           <div className="text-yellow-400">Level: {level} | Pellets: {pelletsCollected}</div>
                           <div className="text-red-400">4 Ghosts hunting you!</div>
+                        </div>
+                      )}
+                      {currentGameType === 'pinball' && (
+                        <div className="pixel-text text-xs neon-text-cyan">
+                          LEFT/RIGHT ARROWS: FLIPPERS  •  HIT BUMPERS FOR POINTS  •  KEEP BALL IN PLAY
                         </div>
                       )}
                       {playTime < 300 && (
