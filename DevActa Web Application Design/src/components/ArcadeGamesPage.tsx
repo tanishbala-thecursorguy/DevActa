@@ -2,16 +2,22 @@ import React, { useState, useEffect, useRef } from "react";
 import { mockGames } from "../data/mockData";
 import { ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 
-// Tetris pieces
-const TETRIS_PIECES = [
-  [[1,1,1,1]], // I
-  [[1,1],[1,1]], // O
-  [[0,1,1],[1,1,0]], // S
-  [[1,1,0],[0,1,1]], // Z
-  [[1,0,0],[1,1,1]], // L
-  [[0,0,1],[1,1,1]], // J
-  [[0,1,0],[1,1,1]], // T
-];
+// Tetris pieces with colors
+const TETRIS_PIECES = {
+  I: { shape: [[1, 1, 1, 1]], color: "cyan" },
+  J: { shape: [[0, 0, 1], [1, 1, 1]], color: "blue" },
+  L: { shape: [[1, 0, 0], [1, 1, 1]], color: "orange" },
+  O: { shape: [[1, 1], [1, 1]], color: "yellow" },
+  S: { shape: [[0, 1, 1], [1, 1, 0]], color: "green" },
+  T: { shape: [[0, 1, 0], [1, 1, 1]], color: "purple" },
+  Z: { shape: [[1, 1, 0], [0, 1, 1]], color: "red" },
+};
+
+const randomTetromino = () => {
+  const tetros = Object.keys(TETRIS_PIECES);
+  const rand = tetros[Math.floor(Math.random() * tetros.length)];
+  return { ...TETRIS_PIECES[rand], name: rand };
+};
 
 interface ArcadeGamesPageProps {
   onGameSelect?: (gameId: number, gameTitle: string) => void;
@@ -29,22 +35,10 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   const [direction, setDirection] = useState({ x: 0, y: 1 });
   
   // Tetris game state
-  const [tetrisGrid, setTetrisGrid] = useState<number[][]>(Array.from({length:20}, ()=>Array(10).fill(0)));
-  const [tetrisPiece, setTetrisPiece] = useState<{shape: number[][], x: number, y: number}>({
-    shape: [[1,1,1,1]], x: 3, y: 0
+  const [tetrisGrid, setTetrisGrid] = useState<(string | null)[][]>(Array.from({length:20}, ()=>Array(10).fill(null)));
+  const [tetrisPiece, setTetrisPiece] = useState<{shape: number[][], pos: {x: number, y: number}, color: string, name: string}>({
+    ...randomTetromino(), pos: { x: 3, y: 0 }
   });
-  
-  // Refs to track latest state in intervals
-  const tetrisGridRef = useRef(tetrisGrid);
-  const tetrisPieceRef = useRef(tetrisPiece);
-  
-  useEffect(() => {
-    tetrisGridRef.current = tetrisGrid;
-  }, [tetrisGrid]);
-  
-  useEffect(() => {
-    tetrisPieceRef.current = tetrisPiece;
-  }, [tetrisPiece]);
   
   // Common game state
   const [gameOver, setGameOver] = useState(false);
@@ -117,71 +111,83 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     return () => clearInterval(gameInterval);
   }, [direction, food, isPlaying, gameOver, currentGameType]);
 
-  // Tetris game logic
+  // Tetris helper functions
+  const tetrisCollision = (tetro: typeof tetrisPiece, dx = 0, dy = 0, newShape: number[][] | null = null) => {
+    const shape = newShape || tetro.shape;
+    return shape.some((row, y) =>
+      row.some((cell, x) =>
+        cell &&
+        (tetro.pos.y + y + dy >= 20 ||
+          tetro.pos.y + y + dy < 0 ||
+          tetro.pos.x + x + dx < 0 ||
+          tetro.pos.x + x + dx >= 10 ||
+          (tetro.pos.y + y + dy >= 0 && tetrisGrid[tetro.pos.y + y + dy][tetro.pos.x + x + dx]))
+      )
+    );
+  };
+
+  const tetrisRotate = (matrix: number[][]) => {
+    return matrix[0].map((_, i) => matrix.map(row => row[i])).reverse();
+  };
+
+  const tetrisFixPiece = () => {
+    const newGrid = tetrisGrid.map(row => [...row]);
+    tetrisPiece.shape.forEach((row, y) => {
+      row.forEach((cell, x) => {
+        if (cell && tetrisPiece.pos.y + y >= 0) {
+          newGrid[tetrisPiece.pos.y + y][tetrisPiece.pos.x + x] = tetrisPiece.color;
+        }
+      });
+    });
+
+    // Clear lines
+    let linesCleared = 0;
+    for (let y = 19; y >= 0; y--) {
+      if (newGrid[y].every(cell => cell)) {
+        newGrid.splice(y, 1);
+        newGrid.unshift(Array(10).fill(null));
+        linesCleared++;
+        y++;
+      }
+    }
+
+    if (linesCleared > 0) {
+      setScore(s => s + linesCleared * 100);
+    }
+
+    setTetrisGrid(newGrid);
+
+    // Spawn new piece
+    const newPiece = { ...randomTetromino(), pos: { x: 3, y: 0 } };
+    setTetrisPiece(newPiece);
+
+    // Check game over
+    if (tetrisCollision(newPiece, 0, 0, null)) {
+      setGameOver(true);
+    }
+  };
+
+  const tetrisMove = (dx: number, dy: number) => {
+    if (!tetrisCollision(tetrisPiece, dx, dy)) {
+      setTetrisPiece(prev => ({
+        ...prev,
+        pos: { x: prev.pos.x + dx, y: prev.pos.y + dy }
+      }));
+    } else if (dy === 1) {
+      tetrisFixPiece();
+    }
+  };
+
+  // Tetris game logic - auto drop
   useEffect(() => {
     if (!isPlaying || gameOver || currentGameType !== 'tetris') return;
 
-    const checkCollision = (x: number, y: number, shape: number[][], grid: number[][]) => {
-      return shape.some((row, i) =>
-        row.some((val, j) => {
-          if (!val) return false;
-          const xx = x + j, yy = y + i;
-          return xx < 0 || xx >= 10 || yy >= 20 || (yy >= 0 && grid[yy] && grid[yy][xx]);
-        })
-      );
-    };
-
     const gameInterval = setInterval(() => {
-      const currentPiece = tetrisPieceRef.current;
-      const currentGrid = tetrisGridRef.current;
-      const newY = currentPiece.y + 1;
-      
-      if (!checkCollision(currentPiece.x, newY, currentPiece.shape, currentGrid)) {
-        // Move piece down
-        setTetrisPiece({ ...currentPiece, y: newY });
-      } else {
-        // Merge piece into grid
-        const newGrid = currentGrid.map(row => [...row]);
-        currentPiece.shape.forEach((row, i) => {
-          row.forEach((val, j) => {
-            if (val && currentPiece.y + i >= 0 && currentPiece.y + i < 20 && currentPiece.x + j >= 0 && currentPiece.x + j < 10) {
-              newGrid[currentPiece.y + i][currentPiece.x + j] = 1;
-            }
-          });
-        });
-
-        // Clear lines
-        let linesCleared = 0;
-        for (let r = 19; r >= 0; r--) {
-          if (newGrid[r].every(Boolean)) {
-            newGrid.splice(r, 1);
-            newGrid.unshift(Array(10).fill(0));
-            linesCleared++;
-            r++;
-          }
-        }
-        
-        if (linesCleared > 0) {
-          setScore(s => s + linesCleared * 100);
-        }
-
-        setTetrisGrid(newGrid);
-
-        // Spawn new piece
-        const newShape = TETRIS_PIECES[Math.floor(Math.random() * TETRIS_PIECES.length)];
-        
-        // Check game over
-        if (checkCollision(3, 0, newShape, newGrid)) {
-          setGameOver(true);
-          return;
-        }
-        
-        setTetrisPiece({ shape: newShape, x: 3, y: 0 });
-      }
+      tetrisMove(0, 1);
     }, 500);
 
     return () => clearInterval(gameInterval);
-  }, [isPlaying, gameOver, currentGameType]);
+  }, [isPlaying, gameOver, currentGameType, tetrisPiece, tetrisGrid]);
 
   const navigateLeft = () => {
     setCurrentIndex((prev) => (prev === 0 ? mockGames.length - 1 : prev - 1));
@@ -209,27 +215,10 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
         setDirection({ x: 0, y: 1 });
         setFood({ x: 5, y: 5 });
       } else if (gameType === 'tetris') {
-        setTetrisGrid(Array.from({length:20}, ()=>Array(10).fill(0)));
-        const firstPiece = TETRIS_PIECES[Math.floor(Math.random() * TETRIS_PIECES.length)];
-        setTetrisPiece({ shape: firstPiece, x: 3, y: 0 });
+        setTetrisGrid(Array.from({length:20}, ()=>Array(10).fill(null)));
+        setTetrisPiece({ ...randomTetromino(), pos: { x: 3, y: 0 } });
       }
     }
-  };
-
-  // Tetris helper functions
-  const rotateTetrisPiece = (shape: number[][]) => {
-    return shape[0].map((_, i) => shape.map(row => row[shape[0].length - 1 - i]));
-  };
-
-  const checkTetrisCollision = (x: number, y: number, shape: number[][]) => {
-    const grid = tetrisGridRef.current;
-    return shape.some((row, i) =>
-      row.some((val, j) => {
-        if (!val) return false;
-        const xx = x + j, yy = y + i;
-        return xx < 0 || xx >= 10 || yy >= 20 || (yy >= 0 && grid[yy] && grid[yy][xx]);
-      })
-    );
   };
 
   // Keyboard navigation and game controls
@@ -249,15 +238,15 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
           }
         } else if (currentGameType === 'tetris') {
           // Tetris controls
-          if (e.key === "ArrowLeft" && !checkTetrisCollision(tetrisPiece.x - 1, tetrisPiece.y, tetrisPiece.shape)) {
-            setTetrisPiece(prev => ({ ...prev, x: prev.x - 1 }));
-          } else if (e.key === "ArrowRight" && !checkTetrisCollision(tetrisPiece.x + 1, tetrisPiece.y, tetrisPiece.shape)) {
-            setTetrisPiece(prev => ({ ...prev, x: prev.x + 1 }));
-          } else if (e.key === "ArrowDown" && !checkTetrisCollision(tetrisPiece.x, tetrisPiece.y + 1, tetrisPiece.shape)) {
-            setTetrisPiece(prev => ({ ...prev, y: prev.y + 1 }));
+          if (e.key === "ArrowLeft") {
+            tetrisMove(-1, 0);
+          } else if (e.key === "ArrowRight") {
+            tetrisMove(1, 0);
+          } else if (e.key === "ArrowDown") {
+            tetrisMove(0, 1);
           } else if (e.key === "ArrowUp") {
-            const rotated = rotateTetrisPiece(tetrisPiece.shape);
-            if (!checkTetrisCollision(tetrisPiece.x, tetrisPiece.y, rotated)) {
+            const rotated = tetrisRotate(tetrisPiece.shape);
+            if (!tetrisCollision(tetrisPiece, 0, 0, rotated)) {
               setTetrisPiece(prev => ({ ...prev, shape: rotated }));
             }
           }
@@ -438,38 +427,49 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
                       )}
 
                       {/* Tetris Game */}
-                      {currentGameType === 'tetris' && (
-                        <div className="grid gap-0.5" style={{ 
-                          gridTemplateColumns: 'repeat(10, 1fr)',
-                          gridTemplateRows: 'repeat(20, 1fr)',
-                          maxWidth: '300px',
-                          margin: '0 auto'
-                        }}>
-                          {Array.from({ length: 20 }).map((_, y) =>
-                            Array.from({ length: 10 }).map((_, x) => {
-                              const isGrid = tetrisGrid[y][x];
-                              const isPiece = tetrisPiece.shape.some((row, i) =>
-                                row.some((val, j) => 
-                                  val && tetrisPiece.x + j === x && tetrisPiece.y + i === y
-                                )
-                              );
-                              
-                              return (
-                                <div
-                                  key={`${x}-${y}`}
-                                  className={`aspect-square rounded-sm ${
-                                    isPiece
-                                      ? 'bg-cyan-400 shadow-lg shadow-cyan-400/50'
-                                      : isGrid
-                                      ? 'bg-cyan-600'
-                                      : 'bg-gray-800/20'
-                                  }`}
-                                />
-                              );
-                            })
-                          )}
-                        </div>
-                      )}
+                      {currentGameType === 'tetris' && (() => {
+                        // Create display grid with current piece drawn
+                        const displayGrid = tetrisGrid.map(row => [...row]);
+                        tetrisPiece.shape.forEach((row, y) => {
+                          row.forEach((cell, x) => {
+                            if (cell && tetrisPiece.pos.y + y >= 0) {
+                              const gx = tetrisPiece.pos.x + x;
+                              const gy = tetrisPiece.pos.y + y;
+                              if (gy < 20 && gx >= 0 && gx < 10) {
+                                displayGrid[gy][gx] = tetrisPiece.color;
+                              }
+                            }
+                          });
+                        });
+
+                        const colorMap: { [key: string]: string } = {
+                          cyan: 'bg-cyan-400 shadow-lg shadow-cyan-400/50',
+                          blue: 'bg-blue-500 shadow-lg shadow-blue-500/50',
+                          orange: 'bg-orange-500 shadow-lg shadow-orange-500/50',
+                          yellow: 'bg-yellow-400 shadow-lg shadow-yellow-400/50',
+                          green: 'bg-green-500 shadow-lg shadow-green-500/50',
+                          purple: 'bg-purple-500 shadow-lg shadow-purple-500/50',
+                          red: 'bg-red-500 shadow-lg shadow-red-500/50',
+                        };
+
+                        return (
+                          <div className="grid gap-0.5" style={{ 
+                            gridTemplateColumns: 'repeat(10, 1fr)',
+                            gridTemplateRows: 'repeat(20, 1fr)',
+                            maxWidth: '300px',
+                            margin: '0 auto'
+                          }}>
+                            {displayGrid.flat().map((cell, idx) => (
+                              <div
+                                key={idx}
+                                className={`aspect-square rounded-sm ${
+                                  cell ? colorMap[cell] || 'bg-cyan-400' : 'bg-gray-800/20'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        );
+                      })()}
                       
                       {/* Game Over Overlay */}
                       {gameOver && (
