@@ -2,6 +2,17 @@ import React, { useState, useEffect } from "react";
 import { mockGames } from "../data/mockData";
 import { ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 
+// Tetris pieces
+const TETRIS_PIECES = [
+  [[1,1,1,1]], // I
+  [[1,1],[1,1]], // O
+  [[0,1,1],[1,1,0]], // S
+  [[1,1,0],[0,1,1]], // Z
+  [[1,0,0],[1,1,1]], // L
+  [[0,0,1],[1,1,1]], // J
+  [[0,1,0],[1,1,1]], // T
+];
+
 interface ArcadeGamesPageProps {
   onGameSelect?: (gameId: number, gameTitle: string) => void;
 }
@@ -10,12 +21,23 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [coins, setCoins] = useState(5);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [currentGameType, setCurrentGameType] = useState<string>('');
+  
+  // Snake game state
   const [snake, setSnake] = useState([{ x: 10, y: 10 }]);
   const [food, setFood] = useState({ x: 5, y: 5 });
   const [direction, setDirection] = useState({ x: 0, y: 1 });
+  
+  // Tetris game state
+  const [tetrisGrid, setTetrisGrid] = useState<number[][]>(Array.from({length:20}, ()=>Array(10).fill(0)));
+  const [tetrisPiece, setTetrisPiece] = useState<{shape: number[][], x: number, y: number}>({
+    shape: [[1,1,1,1]], x: 3, y: 0
+  });
+  
+  // Common game state
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
-  const [playTime, setPlayTime] = useState(0); // Track play time in seconds
+  const [playTime, setPlayTime] = useState(0);
   const [trophiesEarned, setTrophiesEarned] = useState(0);
   const [showTrophyNotification, setShowTrophyNotification] = useState(false);
 
@@ -44,7 +66,7 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
 
   // Snake game logic
   useEffect(() => {
-    if (!isPlaying || gameOver) return;
+    if (!isPlaying || gameOver || currentGameType !== 'snake') return;
 
     const gameInterval = setInterval(() => {
       setSnake(prevSnake => {
@@ -81,7 +103,74 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     }, 200);
 
     return () => clearInterval(gameInterval);
-  }, [direction, food, isPlaying, gameOver]);
+  }, [direction, food, isPlaying, gameOver, currentGameType]);
+
+  // Tetris game logic
+  useEffect(() => {
+    if (!isPlaying || gameOver || currentGameType !== 'tetris') return;
+
+    const spawnPiece = () => {
+      const newShape = TETRIS_PIECES[Math.floor(Math.random() * TETRIS_PIECES.length)];
+      setTetrisPiece({ shape: newShape, x: 3, y: 0 });
+    };
+
+    const checkCollision = (x: number, y: number, shape: number[][]) => {
+      return shape.some((row, i) =>
+        row.some((val, j) => {
+          if (!val) return false;
+          const xx = x + j, yy = y + i;
+          return xx < 0 || xx >= 10 || yy >= 20 || (yy >= 0 && tetrisGrid[yy][xx]);
+        })
+      );
+    };
+
+    const gameInterval = setInterval(() => {
+      setTetrisPiece(prev => {
+        const newY = prev.y + 1;
+        if (!checkCollision(prev.x, newY, prev.shape)) {
+          return { ...prev, y: newY };
+        } else {
+          // Merge piece into grid
+          const newGrid = tetrisGrid.map(row => [...row]);
+          prev.shape.forEach((row, i) => {
+            row.forEach((val, j) => {
+              if (val && prev.y + i >= 0) {
+                newGrid[prev.y + i][prev.x + j] = 1;
+              }
+            });
+          });
+
+          // Clear lines
+          let linesCleared = 0;
+          for (let r = 19; r >= 0; r--) {
+            if (newGrid[r].every(Boolean)) {
+              newGrid.splice(r, 1);
+              newGrid.unshift(Array(10).fill(0));
+              linesCleared++;
+              r++;
+            }
+          }
+          
+          if (linesCleared > 0) {
+            setScore(s => s + linesCleared * 100);
+          }
+
+          setTetrisGrid(newGrid);
+
+          // Check game over
+          if (checkCollision(3, 0, prev.shape)) {
+            setGameOver(true);
+            return prev;
+          }
+
+          spawnPiece();
+          return prev;
+        }
+      });
+    }, 500);
+
+    return () => clearInterval(gameInterval);
+  }, [isPlaying, gameOver, currentGameType, tetrisGrid, tetrisPiece]);
 
   const navigateLeft = () => {
     setCurrentIndex((prev) => (prev === 0 ? mockGames.length - 1 : prev - 1));
@@ -93,30 +182,73 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
 
   const handleSelectGame = () => {
     if (coins > 0) {
+      const currentGame = mockGames[currentIndex];
+      const gameType = currentGame.title.toLowerCase();
+      
       setCoins(coins - 1);
       setIsPlaying(true);
       setGameOver(false);
       setScore(0);
       setPlayTime(0);
-      setSnake([{ x: 10, y: 10 }]);
-      setDirection({ x: 0, y: 1 });
-      setFood({ x: 5, y: 5 });
+      setCurrentGameType(gameType);
+      
+      // Initialize game-specific state
+      if (gameType === 'snake') {
+        setSnake([{ x: 10, y: 10 }]);
+        setDirection({ x: 0, y: 1 });
+        setFood({ x: 5, y: 5 });
+      } else if (gameType === 'tetris') {
+        setTetrisGrid(Array.from({length:20}, ()=>Array(10).fill(0)));
+        const firstPiece = TETRIS_PIECES[Math.floor(Math.random() * TETRIS_PIECES.length)];
+        setTetrisPiece({ shape: firstPiece, x: 3, y: 0 });
+      }
     }
+  };
+
+  // Tetris helper functions
+  const rotateTetrisPiece = (shape: number[][]) => {
+    return shape[0].map((_, i) => shape.map(row => row[shape[0].length - 1 - i]));
+  };
+
+  const checkTetrisCollision = (x: number, y: number, shape: number[][]) => {
+    return shape.some((row, i) =>
+      row.some((val, j) => {
+        if (!val) return false;
+        const xx = x + j, yy = y + i;
+        return xx < 0 || xx >= 10 || yy >= 20 || (yy >= 0 && tetrisGrid[yy][xx]);
+      })
+    );
   };
 
   // Keyboard navigation and game controls
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (isPlaying) {
-        // Game controls
-        if (e.key === "ArrowUp" && direction.y !== 1) {
-          setDirection({ x: 0, y: -1 });
-        } else if (e.key === "ArrowDown" && direction.y !== -1) {
-          setDirection({ x: 0, y: 1 });
-        } else if (e.key === "ArrowLeft" && direction.x !== 1) {
-          setDirection({ x: -1, y: 0 });
-        } else if (e.key === "ArrowRight" && direction.x !== -1) {
-          setDirection({ x: 1, y: 0 });
+        if (currentGameType === 'snake') {
+          // Snake controls
+          if (e.key === "ArrowUp" && direction.y !== 1) {
+            setDirection({ x: 0, y: -1 });
+          } else if (e.key === "ArrowDown" && direction.y !== -1) {
+            setDirection({ x: 0, y: 1 });
+          } else if (e.key === "ArrowLeft" && direction.x !== 1) {
+            setDirection({ x: -1, y: 0 });
+          } else if (e.key === "ArrowRight" && direction.x !== -1) {
+            setDirection({ x: 1, y: 0 });
+          }
+        } else if (currentGameType === 'tetris') {
+          // Tetris controls
+          if (e.key === "ArrowLeft" && !checkTetrisCollision(tetrisPiece.x - 1, tetrisPiece.y, tetrisPiece.shape)) {
+            setTetrisPiece(prev => ({ ...prev, x: prev.x - 1 }));
+          } else if (e.key === "ArrowRight" && !checkTetrisCollision(tetrisPiece.x + 1, tetrisPiece.y, tetrisPiece.shape)) {
+            setTetrisPiece(prev => ({ ...prev, x: prev.x + 1 }));
+          } else if (e.key === "ArrowDown" && !checkTetrisCollision(tetrisPiece.x, tetrisPiece.y + 1, tetrisPiece.shape)) {
+            setTetrisPiece(prev => ({ ...prev, y: prev.y + 1 }));
+          } else if (e.key === "ArrowUp") {
+            const rotated = rotateTetrisPiece(tetrisPiece.shape);
+            if (!checkTetrisCollision(tetrisPiece.x, tetrisPiece.y, rotated)) {
+              setTetrisPiece(prev => ({ ...prev, shape: rotated }));
+            }
+          }
         }
       } else {
         // Menu navigation
@@ -133,7 +265,7 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [currentIndex, isPlaying, direction, coins]);
+  }, [currentIndex, isPlaying, direction, coins, currentGameType, tetrisPiece, tetrisGrid]);
 
   const handleBackToMenu = () => {
     setIsPlaying(false);
@@ -188,60 +320,60 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
               <div className="crt-screen rounded-lg p-8 relative">
                 {!isPlaying ? (
                   <>
-                    {/* Game Carousel */}
-                    <div className="flex items-center justify-center space-x-8 mb-8">
-                      {/* Previous Game (Blurred) */}
-                      <div className="game-card-side opacity-30 blur-sm">
-                        <div className="text-6xl mb-4">{prevGame.thumbnail}</div>
-                        <div className="pixel-text text-lg neon-text-cyan">{prevGame.title}</div>
-                      </div>
+                {/* Game Carousel */}
+                <div className="flex items-center justify-center space-x-8 mb-8">
+                  {/* Previous Game (Blurred) */}
+                  <div className="game-card-side opacity-30 blur-sm">
+                    <div className="text-6xl mb-4">{prevGame.thumbnail}</div>
+                    <div className="pixel-text text-lg neon-text-cyan">{prevGame.title}</div>
+                  </div>
 
-                      {/* Current Game (Focused) */}
-                      <div className="game-card-center">
-                        <div className="neon-border-magenta rounded-lg p-8 bg-gradient-to-b from-purple-900/20 to-blue-900/20">
-                          <div className="text-9xl mb-6 text-center animate-float">{currentGame.thumbnail}</div>
-                          <h2 className="pixel-text text-4xl neon-text-magenta text-center mb-6 tracking-wider">
-                            {currentGame.title.toUpperCase()}
-                          </h2>
-                          
-                          {/* Game Info */}
-                          <div className="space-y-3 mb-6">
-                            <div className="flex items-center justify-between pixel-text text-sm">
-                              <span className="neon-text-cyan">⚡ DIFFICULTY:</span>
-                              <span className="neon-text-yellow">{currentGame.difficulty.toUpperCase()}</span>
-                            </div>
-                            <div className="flex items-center justify-between pixel-text text-sm">
-                              <span className="neon-text-cyan">⏱ TIME:</span>
-                              <span className="neon-text-yellow">{currentGame.time}</span>
-                            </div>
-                            <div className="flex items-center justify-between pixel-text text-sm">
-                              <span className="neon-text-cyan">🏆 REWARD:</span>
-                              <span className="neon-text-yellow">{currentGame.reward} PTS</span>
-                            </div>
-                          </div>
-
-                          {/* Description */}
-                          <p className="text-center text-gray-400 pixel-text text-sm mb-6">
-                            {currentGame.description}
-                          </p>
+                  {/* Current Game (Focused) */}
+                  <div className="game-card-center">
+                    <div className="neon-border-magenta rounded-lg p-8 bg-gradient-to-b from-purple-900/20 to-blue-900/20">
+                      <div className="text-9xl mb-6 text-center animate-float">{currentGame.thumbnail}</div>
+                      <h2 className="pixel-text text-4xl neon-text-magenta text-center mb-6 tracking-wider">
+                        {currentGame.title.toUpperCase()}
+                      </h2>
+                      
+                      {/* Game Info */}
+                      <div className="space-y-3 mb-6">
+                        <div className="flex items-center justify-between pixel-text text-sm">
+                          <span className="neon-text-cyan">⚡ DIFFICULTY:</span>
+                          <span className="neon-text-yellow">{currentGame.difficulty.toUpperCase()}</span>
+                        </div>
+                        <div className="flex items-center justify-between pixel-text text-sm">
+                          <span className="neon-text-cyan">⏱ TIME:</span>
+                          <span className="neon-text-yellow">{currentGame.time}</span>
+                        </div>
+                        <div className="flex items-center justify-between pixel-text text-sm">
+                          <span className="neon-text-cyan">🏆 REWARD:</span>
+                          <span className="neon-text-yellow">{currentGame.reward} PTS</span>
                         </div>
                       </div>
 
-                      {/* Next Game (Blurred) */}
-                      <div className="game-card-side opacity-30 blur-sm">
-                        <div className="text-6xl mb-4">{nextGame.thumbnail}</div>
-                        <div className="pixel-text text-lg neon-text-cyan">{nextGame.title}</div>
-                      </div>
+                      {/* Description */}
+                      <p className="text-center text-gray-400 pixel-text text-sm mb-6">
+                        {currentGame.description}
+                      </p>
                     </div>
+                  </div>
 
-                    {/* Game Counter */}
-                    <div className="text-center pixel-text text-sm neon-text-cyan mb-4">
-                      {currentIndex + 1} / {mockGames.length}
-                    </div>
+                  {/* Next Game (Blurred) */}
+                  <div className="game-card-side opacity-30 blur-sm">
+                    <div className="text-6xl mb-4">{nextGame.thumbnail}</div>
+                    <div className="pixel-text text-lg neon-text-cyan">{nextGame.title}</div>
+                  </div>
+                </div>
+
+                {/* Game Counter */}
+                <div className="text-center pixel-text text-sm neon-text-cyan mb-4">
+                  {currentIndex + 1} / {mockGames.length}
+                </div>
                   </>
                 ) : (
                   <>
-                    {/* Active Game - Snake */}
+                    {/* Active Game Header */}
                     <div className="mb-4 flex justify-between items-center">
                       <button 
                         onClick={handleBackToMenu}
@@ -260,36 +392,74 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
                       </div>
                     </div>
 
-                    {/* Snake Game Grid */}
+                    {/* Game Container */}
                     <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 p-4 rounded-lg border-4 border-cyan-500/30 relative">
-                      <div className="grid gap-0.5" style={{ 
-                        gridTemplateColumns: 'repeat(20, 1fr)',
-                        gridTemplateRows: 'repeat(15, 1fr)',
-                      }}>
-                        {Array.from({ length: 15 }).map((_, y) =>
-                          Array.from({ length: 20 }).map((_, x) => {
-                            const isSnake = snake.some(segment => segment.x === x && segment.y === y);
-                            const isFood = food.x === x && food.y === y;
-                            const isHead = snake[0].x === x && snake[0].y === y;
-                            
-                            return (
-                              <div
-                                key={`${x}-${y}`}
-                                className={`aspect-square rounded-sm ${
-                                  isHead
-                                    ? 'bg-green-400 shadow-lg shadow-green-400/50'
-                                    : isSnake
-                                    ? 'bg-green-500'
-                                    : isFood
-                                    ? 'bg-red-500 shadow-lg shadow-red-500/50 animate-pulse'
-                                    : 'bg-gray-800/20'
-                                }`}
-                              />
-                            );
-                          })
-                        )}
-                      </div>
+                      {/* Snake Game */}
+                      {currentGameType === 'snake' && (
+                        <div className="grid gap-0.5" style={{ 
+                          gridTemplateColumns: 'repeat(20, 1fr)',
+                          gridTemplateRows: 'repeat(15, 1fr)',
+                        }}>
+                          {Array.from({ length: 15 }).map((_, y) =>
+                            Array.from({ length: 20 }).map((_, x) => {
+                              const isSnake = snake.some(segment => segment.x === x && segment.y === y);
+                              const isFood = food.x === x && food.y === y;
+                              const isHead = snake[0].x === x && snake[0].y === y;
+                              
+                              return (
+                                <div
+                                  key={`${x}-${y}`}
+                                  className={`aspect-square rounded-sm ${
+                                    isHead
+                                      ? 'bg-green-400 shadow-lg shadow-green-400/50'
+                                      : isSnake
+                                      ? 'bg-green-500'
+                                      : isFood
+                                      ? 'bg-red-500 shadow-lg shadow-red-500/50 animate-pulse'
+                                      : 'bg-gray-800/20'
+                                  }`}
+                                />
+                              );
+                            })
+                          )}
+                        </div>
+                      )}
+
+                      {/* Tetris Game */}
+                      {currentGameType === 'tetris' && (
+                        <div className="grid gap-0.5" style={{ 
+                          gridTemplateColumns: 'repeat(10, 1fr)',
+                          gridTemplateRows: 'repeat(20, 1fr)',
+                          maxWidth: '300px',
+                          margin: '0 auto'
+                        }}>
+                          {Array.from({ length: 20 }).map((_, y) =>
+                            Array.from({ length: 10 }).map((_, x) => {
+                              const isGrid = tetrisGrid[y][x];
+                              const isPiece = tetrisPiece.shape.some((row, i) =>
+                                row.some((val, j) => 
+                                  val && tetrisPiece.x + j === x && tetrisPiece.y + i === y
+                                )
+                              );
+                              
+                              return (
+                                <div
+                                  key={`${x}-${y}`}
+                                  className={`aspect-square rounded-sm ${
+                                    isPiece
+                                      ? 'bg-cyan-400 shadow-lg shadow-cyan-400/50'
+                                      : isGrid
+                                      ? 'bg-cyan-600'
+                                      : 'bg-gray-800/20'
+                                  }`}
+                                />
+                              );
+                            })
+                          )}
+                        </div>
+                      )}
                       
+                      {/* Game Over Overlay */}
                       {gameOver && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/80">
                           <div className="text-center">
@@ -329,9 +499,16 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
 
                     {/* Controls Help */}
                     <div className="mt-4 text-center space-y-1">
-                      <div className="pixel-text text-xs neon-text-cyan">
-                        USE ARROW KEYS TO MOVE  •  EAT FOOD TO GROW
-                      </div>
+                      {currentGameType === 'snake' && (
+                        <div className="pixel-text text-xs neon-text-cyan">
+                          USE ARROW KEYS TO MOVE  •  EAT FOOD TO GROW
+                        </div>
+                      )}
+                      {currentGameType === 'tetris' && (
+                        <div className="pixel-text text-xs neon-text-cyan">
+                          ARROW KEYS: MOVE  •  UP: ROTATE  •  DOWN: DROP FASTER
+                        </div>
+                      )}
                       {playTime < 300 && (
                         <div className="pixel-text text-xs neon-text-magenta animate-pulse">
                           🏆 Play for 5 minutes to earn 3 trophies! ({formatTime(300 - playTime)} remaining)
@@ -385,36 +562,36 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
               {/* Navigation Controls */}
               {!isPlaying && (
                 <>
-                  <div className="flex items-center justify-center space-x-8 mb-6">
-                    <button
-                      onClick={navigateLeft}
-                      className="neon-button-cyan w-16 h-16 rounded-lg flex items-center justify-center hover:scale-110 transition-transform"
-                    >
-                      <ChevronLeft className="w-8 h-8" />
-                    </button>
+              <div className="flex items-center justify-center space-x-8 mb-6">
+                <button
+                  onClick={navigateLeft}
+                  className="neon-button-cyan w-16 h-16 rounded-lg flex items-center justify-center hover:scale-110 transition-transform"
+                >
+                  <ChevronLeft className="w-8 h-8" />
+                </button>
 
-                    <button
-                      onClick={handleSelectGame}
-                      disabled={coins === 0}
-                      className={`neon-button-magenta px-12 py-4 rounded-lg pixel-text text-xl tracking-wider hover:scale-105 transition-transform ${
-                        coins === 0 ? "opacity-50 cursor-not-allowed" : "animate-pulse-slow"
-                      }`}
-                    >
-                      {coins > 0 ? "▶ PRESS START ◀" : "NO CREDITS"}
-                    </button>
+                <button
+                  onClick={handleSelectGame}
+                  disabled={coins === 0}
+                  className={`neon-button-magenta px-12 py-4 rounded-lg pixel-text text-xl tracking-wider hover:scale-105 transition-transform ${
+                    coins === 0 ? "opacity-50 cursor-not-allowed" : "animate-pulse-slow"
+                  }`}
+                >
+                  {coins > 0 ? "▶ PRESS START ◀" : "NO CREDITS"}
+                </button>
 
-                    <button
-                      onClick={navigateRight}
-                      className="neon-button-cyan w-16 h-16 rounded-lg flex items-center justify-center hover:scale-110 transition-transform"
-                    >
-                      <ChevronRight className="w-8 h-8" />
-                    </button>
-                  </div>
+                <button
+                  onClick={navigateRight}
+                  className="neon-button-cyan w-16 h-16 rounded-lg flex items-center justify-center hover:scale-110 transition-transform"
+                >
+                  <ChevronRight className="w-8 h-8" />
+                </button>
+              </div>
 
-                  {/* Instructions */}
-                  <div className="text-center pixel-text text-sm neon-text-yellow">
-                    ← → TO BROWSE  •  ENTER TO SELECT
-                  </div>
+              {/* Instructions */}
+              <div className="text-center pixel-text text-sm neon-text-yellow">
+                ← → TO BROWSE  •  ENTER TO SELECT
+              </div>
                 </>
               )}
               
