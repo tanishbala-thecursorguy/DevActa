@@ -123,6 +123,40 @@ const SPACE_ENEMY_WIDTH = 50;
 const SPACE_ENEMY_HEIGHT = 50;
 const SPACE_ENEMY_SPEED = 2;
 
+// Brick Blast game constants
+const BRICK_WIDTH = 700;
+const BRICK_HEIGHT = 600;
+const BRICK_PADDLE_WIDTH = 100;
+const BRICK_PADDLE_HEIGHT = 15;
+const BRICK_BALL_RADIUS = 8;
+const BRICK_ROW_COUNT = 5;
+const BRICK_COL_COUNT = 8;
+const BRICK_TILE_WIDTH = 80;
+const BRICK_TILE_HEIGHT = 20;
+const BRICK_PADDING = 10;
+const BRICK_OFFSET_TOP = 40;
+const BRICK_OFFSET_LEFT = 35;
+
+// 2048 game constants
+const GAME_2048_GRID_SIZE = 4;
+const GAME_2048_TILE_SIZE = 100;
+const GAME_2048_GAP = 10;
+
+// Jump Dino game constants
+const DINO_WIDTH = 700;
+const DINO_HEIGHT = 400;
+const DINO_SIZE = 40;
+const DINO_OBSTACLE_WIDTH = 30;
+const DINO_OBSTACLE_HEIGHT = 50;
+const DINO_JUMP_HEIGHT = 120;
+
+// Maze Run game constants
+const MAZE_WIDTH = 600;
+const MAZE_HEIGHT = 600;
+const MAZE_TILE_SIZE = 50;
+const MAZE_ROWS = 12;
+const MAZE_COLS = 12;
+
 interface ArcadeGamesPageProps {
   onGameSelect?: (gameId: number, gameTitle: string) => void;
 }
@@ -131,7 +165,7 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [coins, setCoins] = useState(5);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentGameType, setCurrentGameType] = useState<'snake' | 'tetris' | 'pac-man' | 'pinball' | 'breakout' | 'flappy' | 'car-race' | 'pong' | 'space-shooter'>('snake');
+  const [currentGameType, setCurrentGameType] = useState<'snake' | 'tetris' | 'pac-man' | 'pinball' | 'breakout' | 'flappy' | 'car-race' | 'pong' | 'space-shooter' | 'brick-blast' | 'minesweeper' | '2048' | 'jump-dino' | 'maze-run'>('snake');
   
   // Snake game state
   const [snake, setSnake] = useState([{ x: 10, y: 10 }]);
@@ -194,15 +228,52 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   
   // Space Shooter game state
   const [spacePlayer, setSpacePlayer] = useState({ x: SPACE_WIDTH / 2 - SPACE_PLAYER_WIDTH / 2, y: SPACE_HEIGHT - SPACE_PLAYER_HEIGHT - 20 });
-  const [spaceBullets, setSpaceBullets] = useState<Array<{x: number, y: number}>>([]);
-  const [spaceEnemies, setSpaceEnemies] = useState<Array<{x: number, y: number}>>([]);
+  const [spaceBullets, setSpaceBullets] = useState<{x: number, y: number}[]>([]);
+  const [spaceEnemies, setSpaceEnemies] = useState<{x: number, y: number}[]>([]);
   const [spaceKeys, setSpaceKeys] = useState({ left: false, right: false, shoot: false });
-  const [spaceStars, setSpaceStars] = useState<Array<{x: number, y: number, speed: number}>>([]);
+  const [spaceStars, setSpaceStars] = useState<{x: number, y: number, speed: number}[]>([]);
   const spaceCanvasRef = useRef<HTMLCanvasElement>(null);
   const spacePlayerRef = useRef(spacePlayer);
   const spaceBulletsRef = useRef(spaceBullets);
   const spaceEnemiesRef = useRef(spaceEnemies);
   const spaceKeysRef = useRef(spaceKeys);
+  
+  // Brick Blast game state
+  const [brickPaddleX, setBrickPaddleX] = useState(BRICK_WIDTH / 2 - BRICK_PADDLE_WIDTH / 2);
+  const [brickBall, setBrickBall] = useState({ x: BRICK_WIDTH / 2, y: BRICK_HEIGHT - 100, dx: 4, dy: -4 });
+  const [brickTiles, setBrickTiles] = useState<{x: number, y: number, status: number}[][]>([]);
+  const [brickLives, setBrickLives] = useState(3);
+  const brickCanvasRef = useRef<HTMLCanvasElement>(null);
+  const brickPaddleXRef = useRef(brickPaddleX);
+  const brickBallRef = useRef(brickBall);
+  const brickTilesRef = useRef(brickTiles);
+  
+  // Minesweeper game state
+  const [mineBoard, setMineBoard] = useState<{revealed: boolean, mine: boolean, neighbor: number, flagged: boolean}[][]>([]);
+  const [mineGameOver, setMineGameOver] = useState(false);
+  const [mineWin, setMineWin] = useState(false);
+  const MINE_ROWS = 10;
+  const MINE_COLS = 10;
+  const MINE_COUNT = 15;
+  
+  // 2048 game state
+  const [grid2048, setGrid2048] = useState<number[][]>([]);
+  const [score2048, setScore2048] = useState(0);
+  const [gameOver2048, setGameOver2048] = useState(false);
+  
+  // Jump Dino game state
+  const [dinoY, setDinoY] = useState(DINO_HEIGHT - DINO_SIZE - 20);
+  const [dinoIsJumping, setDinoIsJumping] = useState(false);
+  const [dinoObstacles, setDinoObstacles] = useState<{x: number, id: number}[]>([]);
+  const dinoCanvasRef = useRef<HTMLCanvasElement>(null);
+  const dinoYRef = useRef(dinoY);
+  const dinoObstaclesRef = useRef(dinoObstacles);
+  
+  // Maze Run game state
+  const [mazeMap, setMazeMap] = useState<number[][]>([]);
+  const [mazePlayer, setMazePlayer] = useState({ x: 1, y: 1 });
+  const [mazeWin, setMazeWin] = useState(false);
+  const mazeCanvasRef = useRef<HTMLCanvasElement>(null);
   
   // Common game state
   const [gameOver, setGameOver] = useState(false);
@@ -226,9 +297,18 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
           // Hide notification after 5 seconds
           setTimeout(() => setShowTrophyNotification(false), 5000);
           
-          // End Flappy Bird and Car Race games after 1 minute
-          if (currentGameType === 'flappy' || currentGameType === 'car-race') {
+          // End these games after 1 minute
+          if (currentGameType === 'flappy' || currentGameType === 'car-race' || currentGameType === 'space-shooter' || 
+              currentGameType === 'brick-blast' || currentGameType === 'jump-dino') {
             setGameOver(true);
+            // Return to games page after 2 seconds
+            setTimeout(() => {
+              setIsPlaying(false);
+              setGameOver(false);
+              setScore(0);
+              setPlayTime(0);
+              setTrophiesEarned(0);
+            }, 2000);
           }
         }
         
@@ -237,7 +317,61 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     }, 1000);
 
     return () => clearInterval(timerInterval);
-  }, [isPlaying, gameOver, trophiesEarned]);
+  }, [isPlaying, gameOver, trophiesEarned, currentGameType]);
+
+  // Lock scrolling and prevent default keyboard actions during gameplay
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    // Prevent scrolling
+    const preventScroll = (e: Event) => {
+      e.preventDefault();
+    };
+
+    // Prevent default keyboard actions (except game controls)
+    const preventDefaultKeys = (e: KeyboardEvent) => {
+      // Allow game controls but prevent other actions
+      if (
+        e.key === 'ArrowUp' || 
+        e.key === 'ArrowDown' || 
+        e.key === 'ArrowLeft' || 
+        e.key === 'ArrowRight' ||
+        e.key === ' ' ||
+        e.key === 'w' ||
+        e.key === 'a' ||
+        e.key === 's' ||
+        e.key === 'd'
+      ) {
+        e.preventDefault();
+      }
+      
+      // Prevent all other keys
+      if (
+        e.key === 'Tab' ||
+        e.key === 'Enter' ||
+        e.key === 'Escape' ||
+        e.ctrlKey ||
+        e.metaKey ||
+        e.altKey
+      ) {
+        e.preventDefault();
+      }
+    };
+
+    // Add event listeners
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('wheel', preventScroll, { passive: false });
+    window.addEventListener('touchmove', preventScroll, { passive: false });
+    window.addEventListener('keydown', preventDefaultKeys, { passive: false });
+
+    return () => {
+      // Restore scrolling
+      document.body.style.overflow = 'auto';
+      window.removeEventListener('wheel', preventScroll);
+      window.removeEventListener('touchmove', preventScroll);
+      window.removeEventListener('keydown', preventDefaultKeys);
+    };
+  }, [isPlaying]);
 
   // Snake game logic
   useEffect(() => {
@@ -813,7 +947,7 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
       setGameOver(false);
       setScore(0);
       setPlayTime(0);
-      setCurrentGameType(gameType as 'snake' | 'tetris' | 'pac-man' | 'pinball' | 'breakout' | 'flappy' | 'car-race' | 'pong');
+      setCurrentGameType(gameType as 'snake' | 'tetris' | 'pac-man' | 'pinball' | 'breakout' | 'flappy' | 'car-race' | 'pong' | 'space-shooter' | 'brick-blast' | 'minesweeper' | '2048' | 'jump-dino' | 'maze-run');
       
       // Initialize game-specific state
       if (gameType === 'snake') {
@@ -858,6 +992,33 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
         setPongAiPaddleY(PONG_HEIGHT / 2 - PONG_PADDLE_HEIGHT / 2);
         setPongPlayerScore(0);
         setPongAiScore(0);
+      } else if (gameType === 'space-shooter') {
+        setSpacePlayer({ x: SPACE_WIDTH / 2 - SPACE_PLAYER_WIDTH / 2, y: SPACE_HEIGHT - SPACE_PLAYER_HEIGHT - 20 });
+        setSpaceBullets([]);
+        setSpaceEnemies([]);
+        setSpaceKeys({ left: false, right: false, shoot: false });
+        setSpaceStars([]);
+      } else if (gameType === 'brick-blast') {
+        setBrickPaddleX(BRICK_WIDTH / 2 - BRICK_PADDLE_WIDTH / 2);
+        setBrickBall({ x: BRICK_WIDTH / 2, y: BRICK_HEIGHT - 100, dx: 4, dy: -4 });
+        setBrickTiles([]);
+        setBrickLives(3);
+      } else if (gameType === 'minesweeper') {
+        setMineBoard([]);
+        setMineGameOver(false);
+        setMineWin(false);
+      } else if (gameType === '2048') {
+        setGrid2048([]);
+        setScore2048(0);
+        setGameOver2048(false);
+      } else if (gameType === 'jump-dino') {
+        setDinoY(DINO_HEIGHT - DINO_SIZE - 20);
+        setDinoIsJumping(false);
+        setDinoObstacles([]);
+      } else if (gameType === 'maze-run') {
+        setMazeMap([]);
+        setMazePlayer({ x: 1, y: 1 });
+        setMazeWin(false);
       }
     }
   };
@@ -966,7 +1127,20 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     setGameOver(false);
     setScore(0);
     setPlayTime(0);
+    setTrophiesEarned(0);
   };
+
+  // Auto-return to games page after game over (for games that don't auto-end at 1 minute)
+  useEffect(() => {
+    if (gameOver && isPlaying) {
+      // Wait 3 seconds after game over, then return to games page
+      const autoReturnTimer = setTimeout(() => {
+        handleBackToMenu();
+      }, 3000);
+
+      return () => clearTimeout(autoReturnTimer);
+    }
+  }, [gameOver, isPlaying]);
 
   // Pinball flipper release with better timing
   useEffect(() => {
@@ -1514,7 +1688,7 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     // Initialize obstacles in lanes
     if (carObstaclesRef.current.length === 0) {
       const roadStartX = (CAR_WIDTH - CAR_ROAD_WIDTH) / 2;
-      const initialObstacles = [];
+      const initialObstacles: {x: number, y: number}[] = [];
       for (let i = 0; i < 5; i++) {
         const lane = Math.floor(Math.random() * CAR_NUM_LANES);
         initialObstacles.push({
@@ -1725,6 +1899,546 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
       setPongPlayerPaddleY(y);
     }
   };
+
+  // Update Space Shooter refs when state changes
+  useEffect(() => {
+    spacePlayerRef.current = spacePlayer;
+  }, [spacePlayer]);
+
+  useEffect(() => {
+    spaceBulletsRef.current = spaceBullets;
+  }, [spaceBullets]);
+
+  useEffect(() => {
+    spaceEnemiesRef.current = spaceEnemies;
+  }, [spaceEnemies]);
+
+  useEffect(() => {
+    spaceKeysRef.current = spaceKeys;
+  }, [spaceKeys]);
+
+  // Space Shooter game logic
+  const spaceDraw = (ctx: CanvasRenderingContext2D) => {
+    const player = spacePlayerRef.current;
+    const bullets = spaceBulletsRef.current;
+    const enemies = spaceEnemiesRef.current;
+    
+    ctx.clearRect(0, 0, SPACE_WIDTH, SPACE_HEIGHT);
+    
+    // Space background with stars
+    const gradient = ctx.createLinearGradient(0, 0, 0, SPACE_HEIGHT);
+    gradient.addColorStop(0, '#0a0015');
+    gradient.addColorStop(0.5, '#1a0033');
+    gradient.addColorStop(1, '#000000');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, SPACE_WIDTH, SPACE_HEIGHT);
+
+    // Draw animated stars
+    spaceStars.forEach(star => {
+      const brightness = Math.random() > 0.5 ? 1 : 0.6;
+      ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
+      const size = star.speed > 2 ? 3 : 2;
+      ctx.fillRect(star.x, star.y, size, size);
+    });
+
+    // Draw player rocket ship
+    const px = player.x + SPACE_PLAYER_WIDTH / 2;
+    const py = player.y;
+    
+    // Rocket body
+    ctx.shadowColor = "#00FFFF";
+    ctx.shadowBlur = 25;
+    
+    // Main body
+    ctx.fillStyle = "#CCCCCC";
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(px - 18, py + 40);
+    ctx.lineTo(px - 12, py + 60);
+    ctx.lineTo(px + 12, py + 60);
+    ctx.lineTo(px + 18, py + 40);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Cockpit window
+    ctx.fillStyle = "#00FFFF";
+    ctx.beginPath();
+    ctx.arc(px, py + 20, 8, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Wings
+    ctx.fillStyle = "#FF4444";
+    ctx.beginPath();
+    ctx.moveTo(px - 18, py + 35);
+    ctx.lineTo(px - 30, py + 50);
+    ctx.lineTo(px - 18, py + 45);
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.beginPath();
+    ctx.moveTo(px + 18, py + 35);
+    ctx.lineTo(px + 30, py + 50);
+    ctx.lineTo(px + 18, py + 45);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Engine flames
+    const flameHeight = Math.random() * 10 + 10;
+    ctx.fillStyle = "#FF6600";
+    ctx.beginPath();
+    ctx.moveTo(px - 8, py + 60);
+    ctx.lineTo(px - 5, py + 60 + flameHeight);
+    ctx.lineTo(px, py + 60);
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.fillStyle = "#FFAA00";
+    ctx.beginPath();
+    ctx.moveTo(px, py + 60);
+    ctx.lineTo(px + 5, py + 60 + flameHeight);
+    ctx.lineTo(px + 8, py + 60);
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.shadowBlur = 0;
+
+    // Draw laser bullets
+    ctx.shadowColor = "#00FF00";
+    ctx.shadowBlur = 20;
+    bullets.forEach(bullet => {
+      // Laser beam
+      const gradient = ctx.createLinearGradient(bullet.x, bullet.y, bullet.x, bullet.y + SPACE_BULLET_HEIGHT);
+      gradient.addColorStop(0, "#00FF00");
+      gradient.addColorStop(0.5, "#00FFAA");
+      gradient.addColorStop(1, "#00FF00");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(bullet.x - 2, bullet.y, SPACE_BULLET_WIDTH + 4, SPACE_BULLET_HEIGHT);
+      
+      // Core
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(bullet.x, bullet.y, SPACE_BULLET_WIDTH, SPACE_BULLET_HEIGHT);
+    });
+    ctx.shadowBlur = 0;
+
+    // Draw alien enemies
+    enemies.forEach(enemy => {
+      const ex = enemy.x + SPACE_ENEMY_WIDTH / 2;
+      const ey = enemy.y + SPACE_ENEMY_HEIGHT / 2;
+      
+      ctx.shadowColor = "#FF00FF";
+      ctx.shadowBlur = 25;
+      
+      // Alien body
+      ctx.fillStyle = "#8B00FF";
+      ctx.beginPath();
+      ctx.ellipse(ex, ey, 20, 15, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Alien head
+      ctx.fillStyle = "#AA00FF";
+      ctx.beginPath();
+      ctx.ellipse(ex, ey - 10, 15, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Eyes
+      ctx.fillStyle = "#00FF00";
+      ctx.beginPath();
+      ctx.arc(ex - 6, ey - 12, 5, 0, Math.PI * 2);
+      ctx.arc(ex + 6, ey - 12, 5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = "#000000";
+      ctx.beginPath();
+      ctx.arc(ex - 6, ey - 12, 2, 0, Math.PI * 2);
+      ctx.arc(ex + 6, ey - 12, 2, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Tentacles
+      ctx.strokeStyle = "#8B00FF";
+      ctx.lineWidth = 3;
+      for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(ex + i * 8, ey + 10);
+        ctx.lineTo(ex + i * 8 + Math.sin(Date.now() / 200 + i) * 3, ey + 20);
+        ctx.stroke();
+      }
+      
+      ctx.shadowBlur = 0;
+    });
+
+    // Score display
+    ctx.font = "bold 32px 'Courier New'";
+    ctx.fillStyle = "#00FF00";
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 4;
+    ctx.strokeText("SCORE: " + score, 20, 45);
+    ctx.fillText("SCORE: " + score, 20, 45);
+  };
+
+  const spaceUpdate = () => {
+    if (gameOver) return;
+
+    const keys = spaceKeysRef.current;
+    let newPlayer = { ...spacePlayerRef.current };
+    
+    // Player movement
+    if (keys.left) newPlayer.x -= SPACE_PLAYER_SPEED;
+    if (keys.right) newPlayer.x += SPACE_PLAYER_SPEED;
+    if (newPlayer.x < 0) newPlayer.x = 0;
+    if (newPlayer.x + SPACE_PLAYER_WIDTH > SPACE_WIDTH) newPlayer.x = SPACE_WIDTH - SPACE_PLAYER_WIDTH;
+    setSpacePlayer(newPlayer);
+
+    // Shooting
+    let newBullets = [...spaceBulletsRef.current];
+    if (keys.shoot && newBullets.length < 15) {
+      newBullets.push({ 
+        x: newPlayer.x + SPACE_PLAYER_WIDTH / 2 - SPACE_BULLET_WIDTH / 2, 
+        y: newPlayer.y 
+      });
+    }
+
+    // Move bullets
+    newBullets = newBullets.map(b => ({ ...b, y: b.y - SPACE_BULLET_SPEED }));
+    newBullets = newBullets.filter(b => b.y > -SPACE_BULLET_HEIGHT);
+    setSpaceBullets(newBullets);
+
+    // Move enemies down
+    let newEnemies = spaceEnemiesRef.current.map(e => ({ ...e, y: e.y + SPACE_ENEMY_SPEED }));
+
+    // Remove enemies that went off screen and spawn new ones at top
+    newEnemies = newEnemies.filter(e => e.y < SPACE_HEIGHT);
+    
+    // Continuously spawn new enemies at the top (random chance)
+    if (Math.random() < 0.05) { // 5% chance each frame
+      const randomX = Math.random() * (SPACE_WIDTH - SPACE_ENEMY_WIDTH);
+      newEnemies.push({ 
+        x: randomX, 
+        y: -SPACE_ENEMY_HEIGHT 
+      });
+    }
+
+    // Check collision with player
+    for (let e of newEnemies) {
+      if (
+        newPlayer.x < e.x + SPACE_ENEMY_WIDTH &&
+        newPlayer.x + SPACE_PLAYER_WIDTH > e.x &&
+        newPlayer.y < e.y + SPACE_ENEMY_HEIGHT &&
+        newPlayer.y + SPACE_PLAYER_HEIGHT > e.y
+      ) {
+        setGameOver(true);
+        return;
+      }
+    }
+
+    // Check collision bullets -> enemies
+    const enemiesToRemove = new Set<number>();
+    const bulletsToRemove = new Set<number>();
+    
+    newEnemies.forEach((e, enemyIndex) => {
+      newBullets.forEach((b, bulletIndex) => {
+        if (
+          b.x < e.x + SPACE_ENEMY_WIDTH &&
+          b.x + SPACE_BULLET_WIDTH > e.x &&
+          b.y < e.y + SPACE_ENEMY_HEIGHT &&
+          b.y + SPACE_BULLET_HEIGHT > e.y
+        ) {
+          enemiesToRemove.add(enemyIndex);
+          bulletsToRemove.add(bulletIndex);
+          setScore(prev => prev + 10);
+        }
+      });
+    });
+    
+    newEnemies = newEnemies.filter((_, index) => !enemiesToRemove.has(index));
+    newBullets = newBullets.filter((_, index) => !bulletsToRemove.has(index));
+
+    setSpaceEnemies(newEnemies);
+    setSpaceBullets(newBullets);
+
+    // Update stars
+    setSpaceStars(prev => prev.map(star => ({
+      ...star,
+      y: star.y + star.speed > SPACE_HEIGHT ? 0 : star.y + star.speed
+    })));
+
+    if (spaceCanvasRef.current) {
+      const ctx = spaceCanvasRef.current.getContext("2d");
+      if (ctx) spaceDraw(ctx);
+    }
+  };
+
+  // Space Shooter game loop
+  useEffect(() => {
+    if (!isPlaying || gameOver || currentGameType !== 'space-shooter') return;
+
+    // Initialize stars
+    if (spaceStars.length === 0) {
+      const stars: {x: number, y: number, speed: number}[] = [];
+      for (let i = 0; i < 100; i++) {
+        stars.push({
+          x: Math.random() * SPACE_WIDTH,
+          y: Math.random() * SPACE_HEIGHT,
+          speed: Math.random() * 2 + 1
+        });
+      }
+      setSpaceStars(stars);
+    }
+
+    // Initialize enemies - start with a few at different positions
+    if (spaceEnemiesRef.current.length === 0) {
+      const enemies: {x: number, y: number}[] = [];
+      for (let i = 0; i < 4; i++) {
+        enemies.push({ 
+          x: Math.random() * (SPACE_WIDTH - SPACE_ENEMY_WIDTH), 
+          y: Math.random() * 200 - 100 
+        });
+      }
+      setSpaceEnemies(enemies);
+    }
+
+    // Initialize canvas
+    if (spaceCanvasRef.current) {
+      const ctx = spaceCanvasRef.current.getContext("2d");
+      if (ctx) spaceDraw(ctx);
+    }
+
+    const spaceInterval = setInterval(() => {
+      spaceUpdate();
+    }, 20);
+
+    return () => clearInterval(spaceInterval);
+  }, [isPlaying, gameOver, currentGameType]);
+
+  // Space Shooter keyboard controls
+  useEffect(() => {
+    if (!isPlaying || currentGameType !== 'space-shooter') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") setSpaceKeys(prev => ({ ...prev, left: true }));
+      if (e.key === "ArrowRight") setSpaceKeys(prev => ({ ...prev, right: true }));
+      if (e.key === " ") setSpaceKeys(prev => ({ ...prev, shoot: true }));
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") setSpaceKeys(prev => ({ ...prev, left: false }));
+      if (e.key === "ArrowRight") setSpaceKeys(prev => ({ ...prev, right: false }));
+      if (e.key === " ") setSpaceKeys(prev => ({ ...prev, shoot: false }));
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [isPlaying, currentGameType]);
+
+  // Brick Blast game logic
+  const initializeBrickTiles = () => {
+    const tiles: {x: number, y: number, status: number}[][] = [];
+    for (let c = 0; c < BRICK_COL_COUNT; c++) {
+      tiles[c] = [];
+      for (let r = 0; r < BRICK_ROW_COUNT; r++) {
+        tiles[c][r] = { x: 0, y: 0, status: 1 };
+      }
+    }
+    return tiles;
+  };
+
+  useEffect(() => {
+    brickPaddleXRef.current = brickPaddleX;
+  }, [brickPaddleX]);
+
+  useEffect(() => {
+    brickBallRef.current = brickBall;
+  }, [brickBall]);
+
+  useEffect(() => {
+    brickTilesRef.current = brickTiles;
+  }, [brickTiles]);
+
+  const brickDraw = (ctx: CanvasRenderingContext2D) => {
+    const paddle = brickPaddleXRef.current;
+    const ball = brickBallRef.current;
+    const tiles = brickTilesRef.current;
+    
+    ctx.clearRect(0, 0, BRICK_WIDTH, BRICK_HEIGHT);
+    
+    // Background
+    const gradient = ctx.createLinearGradient(0, 0, 0, BRICK_HEIGHT);
+    gradient.addColorStop(0, '#0a0a1a');
+    gradient.addColorStop(1, '#1a0a2a');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, BRICK_WIDTH, BRICK_HEIGHT);
+    
+    // Draw bricks
+    for (let c = 0; c < BRICK_COL_COUNT; c++) {
+      for (let r = 0; r < BRICK_ROW_COUNT; r++) {
+        if (tiles[c] && tiles[c][r] && tiles[c][r].status === 1) {
+          const brickX = c * (BRICK_TILE_WIDTH + BRICK_PADDING) + BRICK_OFFSET_LEFT;
+          const brickY = r * (BRICK_TILE_HEIGHT + BRICK_PADDING) + BRICK_OFFSET_TOP;
+          
+          // Brick with gradient
+          const brickGradient = ctx.createLinearGradient(brickX, brickY, brickX, brickY + BRICK_TILE_HEIGHT);
+          brickGradient.addColorStop(0, '#00FFFF');
+          brickGradient.addColorStop(1, '#0088FF');
+          ctx.fillStyle = brickGradient;
+          ctx.shadowColor = "#00FFFF";
+          ctx.shadowBlur = 10;
+          ctx.fillRect(brickX, brickY, BRICK_TILE_WIDTH, BRICK_TILE_HEIGHT);
+          ctx.shadowBlur = 0;
+          
+          ctx.strokeStyle = "#004488";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(brickX, brickY, BRICK_TILE_WIDTH, BRICK_TILE_HEIGHT);
+        }
+      }
+    }
+    
+    // Draw paddle
+    ctx.fillStyle = "#00FF00";
+    ctx.shadowColor = "#00FF00";
+    ctx.shadowBlur = 15;
+    ctx.fillRect(paddle, BRICK_HEIGHT - 30, BRICK_PADDLE_WIDTH, BRICK_PADDLE_HEIGHT);
+    ctx.shadowBlur = 0;
+    
+    // Draw ball
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, BRICK_BALL_RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle = "#FFFF00";
+    ctx.shadowColor = "#FFFF00";
+    ctx.shadowBlur = 20;
+    ctx.fill();
+    ctx.closePath();
+    ctx.shadowBlur = 0;
+    
+    // Score & Lives
+    ctx.font = "bold 24px Arial";
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText("Score: " + score, 20, 30);
+    ctx.fillText("Lives: " + brickLives, BRICK_WIDTH - 120, 30);
+  };
+
+  const brickUpdate = () => {
+    if (gameOver) return;
+    
+    const ball = { ...brickBallRef.current };
+    const tiles = brickTilesRef.current.map(col => col.map(tile => ({ ...tile })));
+    const paddle = brickPaddleXRef.current;
+    
+    // Move ball
+    ball.x += ball.dx;
+    ball.y += ball.dy;
+    
+    // Wall collisions
+    if (ball.x + BRICK_BALL_RADIUS > BRICK_WIDTH || ball.x - BRICK_BALL_RADIUS < 0) {
+      ball.dx = -ball.dx;
+    }
+    if (ball.y - BRICK_BALL_RADIUS < 0) {
+      ball.dy = -ball.dy;
+    }
+    
+    // Paddle collision
+    if (
+      ball.x > paddle &&
+      ball.x < paddle + BRICK_PADDLE_WIDTH &&
+      ball.y + BRICK_BALL_RADIUS > BRICK_HEIGHT - 30 &&
+      ball.y + BRICK_BALL_RADIUS < BRICK_HEIGHT - 30 + BRICK_PADDLE_HEIGHT
+    ) {
+      ball.dy = -Math.abs(ball.dy);
+      // Add angle based on where ball hits paddle
+      const hitPos = (ball.x - paddle) / BRICK_PADDLE_WIDTH;
+      ball.dx = (hitPos - 0.5) * 8;
+    }
+    
+    // Bottom wall (lose life)
+    if (ball.y + BRICK_BALL_RADIUS > BRICK_HEIGHT) {
+      const newLives = brickLives - 1;
+      setBrickLives(newLives);
+      if (newLives <= 0) {
+        setGameOver(true);
+      } else {
+        ball.x = BRICK_WIDTH / 2;
+        ball.y = BRICK_HEIGHT - 100;
+        ball.dx = 4;
+        ball.dy = -4;
+      }
+    }
+    
+    // Brick collisions
+    for (let c = 0; c < BRICK_COL_COUNT; c++) {
+      for (let r = 0; r < BRICK_ROW_COUNT; r++) {
+        if (tiles[c] && tiles[c][r] && tiles[c][r].status === 1) {
+          const brickX = c * (BRICK_TILE_WIDTH + BRICK_PADDING) + BRICK_OFFSET_LEFT;
+          const brickY = r * (BRICK_TILE_HEIGHT + BRICK_PADDING) + BRICK_OFFSET_TOP;
+          
+          if (
+            ball.x > brickX &&
+            ball.x < brickX + BRICK_TILE_WIDTH &&
+            ball.y > brickY &&
+            ball.y < brickY + BRICK_TILE_HEIGHT
+          ) {
+            ball.dy = -ball.dy;
+            tiles[c][r].status = 0;
+            setScore(prev => prev + 10);
+            
+            // Check if all bricks destroyed
+            const allDestroyed = tiles.every(col => col.every(tile => tile.status === 0));
+            if (allDestroyed) {
+              setGameOver(true);
+            }
+          }
+        }
+      }
+    }
+    
+    setBrickBall(ball);
+    setBrickTiles(tiles);
+    
+    if (brickCanvasRef.current) {
+      const ctx = brickCanvasRef.current.getContext("2d");
+      if (ctx) brickDraw(ctx);
+    }
+  };
+
+  useEffect(() => {
+    if (!isPlaying || gameOver || currentGameType !== 'brick-blast') return;
+    
+    // Initialize bricks
+    if (brickTilesRef.current.length === 0) {
+      setBrickTiles(initializeBrickTiles());
+    }
+    
+    // Initialize canvas
+    if (brickCanvasRef.current) {
+      const ctx = brickCanvasRef.current.getContext("2d");
+      if (ctx) brickDraw(ctx);
+    }
+    
+    const brickInterval = setInterval(() => {
+      brickUpdate();
+    }, 16);
+    
+    return () => clearInterval(brickInterval);
+  }, [isPlaying, gameOver, currentGameType]);
+
+  // Brick Blast paddle controls
+  useEffect(() => {
+    if (!isPlaying || currentGameType !== 'brick-blast') return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") {
+        setBrickPaddleX(prev => Math.max(0, prev - 20));
+      }
+      if (e.key === "ArrowRight") {
+        setBrickPaddleX(prev => Math.min(BRICK_WIDTH - BRICK_PADDLE_WIDTH, prev + 20));
+      }
+    };
+    
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isPlaying, currentGameType]);
 
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -2134,6 +2848,58 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
                             </div>
                             <div className="pixel-text text-sm neon-text-yellow">
                               First to score wins! Game ends in 1 minute!
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {currentGameType === 'space-shooter' && (
+                        <div className="flex flex-col items-center justify-center w-full h-full">
+                          <canvas 
+                            ref={spaceCanvasRef} 
+                            width={SPACE_WIDTH} 
+                            height={SPACE_HEIGHT} 
+                            style={{ 
+                              backgroundColor: "#000428", 
+                              border: "4px solid #00FF00",
+                              borderRadius: "12px",
+                              boxShadow: "0 0 30px #00FF00, inset 0 0 20px rgba(0,255,0,0.2)",
+                              maxWidth: "90vw",
+                              maxHeight: "90vh"
+                            }} 
+                          />
+                          <div className="mt-6 text-center">
+                            <div className="pixel-text text-lg neon-text-cyan mb-3">
+                              🚀 ARROW KEYS: MOVE • SPACEBAR: SHOOT
+                            </div>
+                            <div className="pixel-text text-sm neon-text-yellow">
+                              Destroy all enemies! Survive 1 minute for 3 trophies!
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {currentGameType === 'brick-blast' && (
+                        <div className="flex flex-col items-center justify-center w-full h-full">
+                          <canvas 
+                            ref={brickCanvasRef} 
+                            width={BRICK_WIDTH} 
+                            height={BRICK_HEIGHT} 
+                            style={{ 
+                              backgroundColor: "#0a0a1a", 
+                              border: "4px solid #00FFFF",
+                              borderRadius: "12px",
+                              boxShadow: "0 0 30px #00FFFF, inset 0 0 20px rgba(0,255,255,0.2)",
+                              maxWidth: "90vw",
+                              maxHeight: "90vh"
+                            }} 
+                          />
+                          <div className="mt-6 text-center">
+                            <div className="pixel-text text-lg neon-text-cyan mb-3">
+                              🧱 ARROW KEYS: MOVE PADDLE • BREAK ALL BRICKS!
+                            </div>
+                            <div className="pixel-text text-sm neon-text-yellow">
+                              Lives: {brickLives} • Survive 1 minute for 3 trophies!
                             </div>
                           </div>
                         </div>
