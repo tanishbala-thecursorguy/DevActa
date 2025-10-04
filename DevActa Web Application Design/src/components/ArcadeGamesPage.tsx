@@ -19,6 +19,26 @@ const randomTetromino = () => {
   return { ...TETRIS_PIECES[rand], name: rand };
 };
 
+// Pac-Man constants
+const PACMAN_EMPTY = 0;
+const PACMAN_WALL = 1;
+const PACMAN_PELLET = 2;
+const PACMAN_PLAYER = 3;
+const PACMAN_GHOST = 4;
+
+const INITIAL_PACMAN_MAP = [
+  [1,1,1,1,1,1,1,1,1,1],
+  [1,2,2,2,1,2,2,2,2,1],
+  [1,2,1,2,1,2,1,1,2,1],
+  [1,2,1,2,2,2,1,2,2,1],
+  [1,2,1,1,1,1,1,2,1,1],
+  [1,2,2,2,2,2,2,2,2,1],
+  [1,2,1,1,1,1,1,1,2,1],
+  [1,2,2,2,2,2,2,2,2,1],
+  [1,4,1,1,1,1,1,1,2,1],
+  [1,1,1,1,1,1,1,1,1,1],
+];
+
 interface ArcadeGamesPageProps {
   onGameSelect?: (gameId: number, gameTitle: string) => void;
 }
@@ -39,6 +59,11 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   const [tetrisPiece, setTetrisPiece] = useState<{shape: number[][], pos: {x: number, y: number}, color: string, name: string}>({
     ...randomTetromino(), pos: { x: 3, y: 0 }
   });
+  
+  // Pac-Man game state
+  const [pacmanMap, setPacmanMap] = useState(INITIAL_PACMAN_MAP.map(row => [...row]));
+  const [pacmanPos, setPacmanPos] = useState({ x: 1, y: 1 });
+  const [ghostPos, setGhostPos] = useState({ x: 1, y: 8 });
   
   // Common game state
   const [gameOver, setGameOver] = useState(false);
@@ -189,6 +214,75 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     return () => clearInterval(gameInterval);
   }, [isPlaying, gameOver, currentGameType, tetrisPiece, tetrisGrid]);
 
+  // Pac-Man helper functions
+  const pacmanMove = (dx: number, dy: number) => {
+    if (gameOver) return;
+    
+    const nx = pacmanPos.x + dx;
+    const ny = pacmanPos.y + dy;
+    
+    if (pacmanMap[ny][nx] !== PACMAN_WALL) {
+      if (pacmanMap[ny][nx] === PACMAN_PELLET) {
+        setScore(prev => prev + 10);
+      }
+      
+      if (nx === ghostPos.x && ny === ghostPos.y) {
+        setGameOver(true);
+        return;
+      }
+
+      const newMap = pacmanMap.map(row => [...row]);
+      newMap[pacmanPos.y][pacmanPos.x] = PACMAN_EMPTY;
+      newMap[ny][nx] = PACMAN_PLAYER;
+      setPacmanMap(newMap);
+      setPacmanPos({ x: nx, y: ny });
+    }
+  };
+
+  const pacmanMoveGhost = () => {
+    if (gameOver) return;
+    
+    const directions = [
+      { dx: 0, dy: -1 },
+      { dx: 0, dy: 1 },
+      { dx: -1, dy: 0 },
+      { dx: 1, dy: 0 },
+    ];
+    
+    const valid = directions.filter(({ dx, dy }) => {
+      const nx = ghostPos.x + dx;
+      const ny = ghostPos.y + dy;
+      return pacmanMap[ny][nx] !== PACMAN_WALL;
+    });
+    
+    if (valid.length === 0) return;
+    
+    const move = valid[Math.floor(Math.random() * valid.length)];
+    const nx = ghostPos.x + move.dx;
+    const ny = ghostPos.y + move.dy;
+    
+    if (nx === pacmanPos.x && ny === pacmanPos.y) {
+      setGameOver(true);
+      return;
+    }
+
+    const newMap = pacmanMap.map(row => row.map(cell => cell === PACMAN_GHOST ? PACMAN_EMPTY : cell));
+    newMap[ny][nx] = PACMAN_GHOST;
+    setPacmanMap(newMap);
+    setGhostPos({ x: nx, y: ny });
+  };
+
+  // Pac-Man game logic - ghost AI
+  useEffect(() => {
+    if (!isPlaying || gameOver || currentGameType !== 'pac-man') return;
+
+    const ghostInterval = setInterval(() => {
+      pacmanMoveGhost();
+    }, 500);
+
+    return () => clearInterval(ghostInterval);
+  }, [isPlaying, gameOver, currentGameType, pacmanPos, ghostPos, pacmanMap]);
+
   const navigateLeft = () => {
     setCurrentIndex((prev) => (prev === 0 ? mockGames.length - 1 : prev - 1));
   };
@@ -217,6 +311,10 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
       } else if (gameType === 'tetris') {
         setTetrisGrid(Array.from({length:20}, ()=>Array(10).fill(null)));
         setTetrisPiece({ ...randomTetromino(), pos: { x: 3, y: 0 } });
+      } else if (gameType === 'pac-man') {
+        setPacmanMap(INITIAL_PACMAN_MAP.map(row => [...row]));
+        setPacmanPos({ x: 1, y: 1 });
+        setGhostPos({ x: 1, y: 8 });
       }
     }
   };
@@ -250,6 +348,17 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
               setTetrisPiece(prev => ({ ...prev, shape: rotated }));
             }
           }
+        } else if (currentGameType === 'pac-man') {
+          // Pac-Man controls
+          if (e.key === "ArrowUp") {
+            pacmanMove(0, -1);
+          } else if (e.key === "ArrowDown") {
+            pacmanMove(0, 1);
+          } else if (e.key === "ArrowLeft") {
+            pacmanMove(-1, 0);
+          } else if (e.key === "ArrowRight") {
+            pacmanMove(1, 0);
+          }
         }
       } else {
         // Menu navigation
@@ -266,7 +375,7 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [currentIndex, isPlaying, direction, coins, currentGameType, tetrisPiece, tetrisGrid]);
+  }, [currentIndex, isPlaying, direction, coins, currentGameType, tetrisPiece, tetrisGrid, pacmanPos, ghostPos, pacmanMap]);
 
   const handleBackToMenu = () => {
     setIsPlaying(false);
@@ -470,6 +579,41 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
                           </div>
                         );
                       })()}
+
+                      {/* Pac-Man Game */}
+                      {currentGameType === 'pac-man' && (
+                        <div className="grid gap-0.5" style={{ 
+                          gridTemplateColumns: 'repeat(10, 1fr)',
+                          gridTemplateRows: 'repeat(10, 1fr)',
+                          maxWidth: '400px',
+                          margin: '0 auto'
+                        }}>
+                          {pacmanMap.flat().map((cell, idx) => {
+                            let cellColor = 'bg-gray-800/20';
+                            
+                            if (cell === PACMAN_WALL) {
+                              cellColor = 'bg-blue-900 border border-blue-400';
+                            } else if (cell === PACMAN_PELLET) {
+                              cellColor = 'bg-gray-800/20';
+                            } else if (cell === PACMAN_PLAYER) {
+                              cellColor = 'bg-yellow-400 shadow-lg shadow-yellow-400/50 rounded-full';
+                            } else if (cell === PACMAN_GHOST) {
+                              cellColor = 'bg-red-500 shadow-lg shadow-red-500/50';
+                            }
+                            
+                            return (
+                              <div
+                                key={idx}
+                                className={`aspect-square rounded-sm flex items-center justify-center ${cellColor}`}
+                              >
+                                {cell === PACMAN_PELLET && (
+                                  <div className="w-2 h-2 bg-yellow-300 rounded-full shadow-sm shadow-yellow-300/50" />
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                       
                       {/* Game Over Overlay */}
                       {gameOver && (
@@ -519,6 +663,11 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
                       {currentGameType === 'tetris' && (
                         <div className="pixel-text text-xs neon-text-cyan">
                           ARROW KEYS: MOVE  •  UP: ROTATE  •  DOWN: DROP FASTER
+                        </div>
+                      )}
+                      {currentGameType === 'pac-man' && (
+                        <div className="pixel-text text-xs neon-text-cyan">
+                          ARROW KEYS: MOVE  •  COLLECT PELLETS  •  AVOID GHOSTS
                         </div>
                       )}
                       {playTime < 300 && (
