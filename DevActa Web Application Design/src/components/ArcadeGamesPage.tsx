@@ -62,9 +62,16 @@ const PINBALL_BALL_RADIUS = 10;
 const PINBALL_FLIPPER_LENGTH = 80;
 
 const PINBALL_BUMPERS = [
-  { x: 100, y: 150, r: 20, score: 10 },
-  { x: 300, y: 200, r: 20, score: 10 },
-  { x: 200, y: 100, r: 20, score: 20 },
+  { x: 80, y: 120, r: 18, score: 10 },
+  { x: 150, y: 100, r: 18, score: 10 },
+  { x: 250, y: 100, r: 18, score: 10 },
+  { x: 320, y: 120, r: 18, score: 10 },
+  { x: 120, y: 180, r: 20, score: 15 },
+  { x: 280, y: 180, r: 20, score: 15 },
+  { x: 200, y: 140, r: 22, score: 25 },
+  { x: 200, y: 220, r: 18, score: 12 },
+  { x: 100, y: 250, r: 16, score: 8 },
+  { x: 300, y: 250, r: 16, score: 8 },
 ];
 
 interface ArcadeGamesPageProps {
@@ -466,6 +473,28 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     ctx.closePath();
     ctx.shadowBlur = 0;
 
+    // Draw side walls to prevent ball from falling down sides
+    ctx.strokeStyle = "#FF0000";
+    ctx.lineWidth = 4;
+    ctx.shadowColor = "#FF0000";
+    ctx.shadowBlur = 3;
+    
+    // Left side wall
+    ctx.beginPath();
+    ctx.moveTo(30, 0);
+    ctx.lineTo(30, flipperY - 20);
+    ctx.stroke();
+    ctx.closePath();
+    
+    // Right side wall
+    ctx.beginPath();
+    ctx.moveTo(PINBALL_WIDTH - 30, 0);
+    ctx.lineTo(PINBALL_WIDTH - 30, flipperY - 20);
+    ctx.stroke();
+    ctx.closePath();
+    
+    ctx.shadowBlur = 0;
+
     // Draw center line
     ctx.strokeStyle = "#4169E1";
     ctx.lineWidth = 2;
@@ -489,55 +518,93 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   const pinballUpdate = () => {
     let newBall = { ...pinballBall };
 
-    // Apply gravity
-    newBall.vy += 0.3;
+    // Stronger gravity for faster gameplay
+    newBall.vy += 0.6;
 
     // Update position
     newBall.x += newBall.vx;
     newBall.y += newBall.vy;
 
-    // Wall collisions with proper bouncing
+    // Better wall collisions with stronger bouncing
     if (newBall.x - PINBALL_BALL_RADIUS <= 0) {
       newBall.x = PINBALL_BALL_RADIUS;
-      newBall.vx = Math.abs(newBall.vx) * 0.8;
+      newBall.vx = Math.abs(newBall.vx) * 0.9;
     }
     if (newBall.x + PINBALL_BALL_RADIUS >= PINBALL_WIDTH) {
       newBall.x = PINBALL_WIDTH - PINBALL_BALL_RADIUS;
-      newBall.vx = -Math.abs(newBall.vx) * 0.8;
+      newBall.vx = -Math.abs(newBall.vx) * 0.9;
     }
     if (newBall.y - PINBALL_BALL_RADIUS <= 0) {
       newBall.y = PINBALL_BALL_RADIUS;
-      newBall.vy = Math.abs(newBall.vy) * 0.8;
+      newBall.vy = Math.abs(newBall.vy) * 0.9;
     }
 
-    // Flipper collision detection
+    // Side walls to prevent ball from falling down sides
     const flipperY = PINBALL_HEIGHT - 30;
     const leftFlipperX = PINBALL_WIDTH / 2 - 60;
     const rightFlipperX = PINBALL_WIDTH / 2 + 60;
     
-    // Left flipper
-    if (leftFlipper && 
-        newBall.y + PINBALL_BALL_RADIUS >= flipperY - 10 &&
-        newBall.y - PINBALL_BALL_RADIUS <= flipperY + 10 &&
-        newBall.x >= leftFlipperX - 20 &&
-        newBall.x <= leftFlipperX + 40) {
-      newBall.vy = -Math.abs(newBall.vy) - 3;
-      newBall.vx = -Math.abs(newBall.vx) - 2;
-      newBall.y = flipperY - PINBALL_BALL_RADIUS - 5;
+    // Left side wall - only active above flippers
+    if (newBall.y < flipperY - 20) {
+      if (newBall.x < 30) {
+        newBall.x = 30;
+        newBall.vx = Math.abs(newBall.vx) * 0.9;
+      }
+      if (newBall.x > PINBALL_WIDTH - 30) {
+        newBall.x = PINBALL_WIDTH - 30;
+        newBall.vx = -Math.abs(newBall.vx) * 0.9;
+      }
     }
     
-    // Right flipper
-    if (rightFlipper && 
-        newBall.y + PINBALL_BALL_RADIUS >= flipperY - 10 &&
-        newBall.y - PINBALL_BALL_RADIUS <= flipperY + 10 &&
-        newBall.x >= rightFlipperX - 40 &&
-        newBall.x <= rightFlipperX + 20) {
-      newBall.vy = -Math.abs(newBall.vy) - 3;
-      newBall.vx = Math.abs(newBall.vx) + 2;
-      newBall.y = flipperY - PINBALL_BALL_RADIUS - 5;
+    // Center gap between flippers - ball can only fall through here
+    if (newBall.y > flipperY - 10) {
+      if (newBall.x < leftFlipperX + 40 && newBall.x > leftFlipperX - 20) {
+        // Ball is near left flipper - allow it
+      } else if (newBall.x > rightFlipperX - 40 && newBall.x < rightFlipperX + 20) {
+        // Ball is near right flipper - allow it
+      } else if (newBall.x >= leftFlipperX + 40 && newBall.x <= rightFlipperX - 40) {
+        // Ball is in center gap - allow it to fall
+      } else {
+        // Ball is trying to fall down the side - bounce it back
+        if (newBall.x < PINBALL_WIDTH / 2) {
+          newBall.x = leftFlipperX + 40;
+          newBall.vx = Math.abs(newBall.vx) * 0.8;
+        } else {
+          newBall.x = rightFlipperX - 40;
+          newBall.vx = -Math.abs(newBall.vx) * 0.8;
+        }
+      }
     }
 
-    // Bumper collisions with better physics
+    // Much better flipper collision detection
+    
+    // Left flipper - MUCH stronger launch
+    if (leftFlipper && 
+        newBall.y + PINBALL_BALL_RADIUS >= flipperY - 15 &&
+        newBall.y - PINBALL_BALL_RADIUS <= flipperY + 15 &&
+        newBall.x >= leftFlipperX - 30 &&
+        newBall.x <= leftFlipperX + 50) {
+      // Strong upward launch
+      newBall.vy = -15; // Much stronger upward force
+      newBall.vx = -8; // Strong leftward force
+      newBall.y = flipperY - PINBALL_BALL_RADIUS - 10;
+      setScore(prev => prev + 5); // Bonus for flipper hit
+    }
+    
+    // Right flipper - MUCH stronger launch
+    if (rightFlipper && 
+        newBall.y + PINBALL_BALL_RADIUS >= flipperY - 15 &&
+        newBall.y - PINBALL_BALL_RADIUS <= flipperY + 15 &&
+        newBall.x >= rightFlipperX - 50 &&
+        newBall.x <= rightFlipperX + 30) {
+      // Strong upward launch
+      newBall.vy = -15; // Much stronger upward force
+      newBall.vx = 8; // Strong rightward force
+      newBall.y = flipperY - PINBALL_BALL_RADIUS - 10;
+      setScore(prev => prev + 5); // Bonus for flipper hit
+    }
+
+    // Much better bumper collisions with stronger bouncing
     PINBALL_BUMPERS.forEach(b => {
       const dx = newBall.x - b.x;
       const dy = newBall.y - b.y;
@@ -554,32 +621,32 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
         newBall.x += nx * overlap;
         newBall.y += ny * overlap;
         
-        // Reflect velocity
+        // Much stronger reflection with energy boost
         const dotProduct = newBall.vx * nx + newBall.vy * ny;
         newBall.vx -= 2 * dotProduct * nx;
         newBall.vy -= 2 * dotProduct * ny;
         
-        // Add some energy
-        newBall.vx *= 1.2;
-        newBall.vy *= 1.2;
+        // Add significant energy boost
+        newBall.vx *= 1.5;
+        newBall.vy *= 1.5;
         
         setScore(prev => prev + b.score);
       }
     });
 
-    // Ball out of bounds - reset
+    // Ball out of bounds - reset with random launch
     if (newBall.y > PINBALL_HEIGHT + 50) {
       newBall = { 
         x: PINBALL_WIDTH / 2, 
-        y: PINBALL_HEIGHT - 50, 
-        vx: (Math.random() - 0.5) * 4, 
-        vy: -8 
+        y: PINBALL_HEIGHT - 80, 
+        vx: (Math.random() - 0.5) * 6, 
+        vy: -10 
       };
     }
 
-    // Apply friction
-    newBall.vx *= 0.999;
-    newBall.vy *= 0.999;
+    // Less friction for faster gameplay
+    newBall.vx *= 0.998;
+    newBall.vy *= 0.998;
 
     setPinballBall(newBall);
 
@@ -644,8 +711,8 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
         setPinballBall({ 
           x: PINBALL_WIDTH / 2, 
           y: PINBALL_HEIGHT - 80, 
-          vx: (Math.random() - 0.5) * 3, 
-          vy: -6 
+          vx: (Math.random() - 0.5) * 5, 
+          vy: -8 
         });
         setLeftFlipper(false);
         setRightFlipper(false);
@@ -700,12 +767,12 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
           } else if (e.key === "ArrowRight") {
             setRightFlipper(true);
           } else if (e.key === " ") {
-            // Space bar to launch ball
+            // Space bar to launch ball - STRONGER LAUNCH
             if (pinballBall.vx === 0 && pinballBall.vy === 0) {
               setPinballBall(prev => ({
                 ...prev,
-                vx: (Math.random() - 0.5) * 4,
-                vy: -8
+                vx: (Math.random() - 0.5) * 8,
+                vy: -12
               }));
             }
           }
@@ -739,9 +806,9 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     const handleKeyUp = (e: KeyboardEvent) => {
       if (isPlaying && currentGameType === 'pinball') {
         if (e.key === "ArrowLeft") {
-          setTimeout(() => setLeftFlipper(false), 100);
+          setTimeout(() => setLeftFlipper(false), 50); // Faster release
         } else if (e.key === "ArrowRight") {
-          setTimeout(() => setRightFlipper(false), 100);
+          setTimeout(() => setRightFlipper(false), 50); // Faster release
         }
       }
     };
