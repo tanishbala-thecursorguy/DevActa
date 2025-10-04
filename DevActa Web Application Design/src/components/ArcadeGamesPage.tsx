@@ -15,6 +15,32 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   const [direction, setDirection] = useState({ x: 0, y: 1 });
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
+  const [playTime, setPlayTime] = useState(0); // Track play time in seconds
+  const [trophiesEarned, setTrophiesEarned] = useState(0);
+  const [showTrophyNotification, setShowTrophyNotification] = useState(false);
+
+  // Timer for tracking play time and awarding trophies
+  useEffect(() => {
+    if (!isPlaying || gameOver) return;
+
+    const timerInterval = setInterval(() => {
+      setPlayTime(prev => {
+        const newTime = prev + 1;
+        
+        // Award 3 trophies after 5 minutes (300 seconds)
+        if (newTime === 300 && trophiesEarned === 0) {
+          setTrophiesEarned(3);
+          setShowTrophyNotification(true);
+          // Hide notification after 5 seconds
+          setTimeout(() => setShowTrophyNotification(false), 5000);
+        }
+        
+        return newTime;
+      });
+    }, 1000);
+
+    return () => clearInterval(timerInterval);
+  }, [isPlaying, gameOver, trophiesEarned]);
 
   // Snake game logic
   useEffect(() => {
@@ -102,6 +128,7 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
       setIsPlaying(true);
       setGameOver(false);
       setScore(0);
+      setPlayTime(0);
       setSnake([{ x: 10, y: 10 }]);
       setDirection({ x: 0, y: 1 });
       setFood({ x: 5, y: 5 });
@@ -112,6 +139,14 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     setIsPlaying(false);
     setGameOver(false);
     setScore(0);
+    setPlayTime(0);
+  };
+
+  // Format time as MM:SS
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const currentGame = mockGames[currentIndex];
@@ -214,7 +249,15 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
                       >
                         <ArrowLeft className="w-4 h-4" /> BACK
                       </button>
-                      <div className="pixel-text neon-text-yellow text-xl">SCORE: {score}</div>
+                      <div className="flex gap-4 items-center">
+                        <div className="pixel-text neon-text-yellow text-xl">SCORE: {score}</div>
+                        <div className="pixel-text neon-text-cyan text-lg">TIME: {formatTime(playTime)}</div>
+                        {trophiesEarned > 0 && (
+                          <div className="pixel-text neon-text-magenta text-lg animate-pulse">
+                            🏆 x{trophiesEarned}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Snake Game Grid */}
@@ -251,22 +294,49 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
                         <div className="absolute inset-0 flex items-center justify-center bg-black/80">
                           <div className="text-center">
                             <div className="pixel-text text-4xl neon-text-magenta mb-4">GAME OVER!</div>
-                            <div className="pixel-text text-2xl neon-text-yellow mb-6">Final Score: {score}</div>
+                            <div className="pixel-text text-2xl neon-text-yellow mb-2">Final Score: {score}</div>
+                            <div className="pixel-text text-lg neon-text-cyan mb-2">Time Played: {formatTime(playTime)}</div>
+                            {trophiesEarned > 0 && (
+                              <div className="pixel-text text-2xl neon-text-magenta mb-4 animate-pulse">
+                                🏆 {trophiesEarned} Trophies Earned!
+                              </div>
+                            )}
                             <button
                               onClick={handleSelectGame}
                               disabled={coins === 0}
-                              className="neon-button-cyan px-8 py-3 rounded-lg pixel-text"
+                              className="neon-button-cyan px-8 py-3 rounded-lg pixel-text mt-4"
                             >
                               {coins > 0 ? 'PLAY AGAIN' : 'NO CREDITS'}
                             </button>
                           </div>
                         </div>
                       )}
+                      
+                      {/* Trophy Achievement Notification */}
+                      {showTrophyNotification && !gameOver && (
+                        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50">
+                          <div className="neon-border-magenta rounded-lg p-6 bg-gradient-to-br from-purple-900 via-pink-900 to-purple-900 shadow-2xl animate-bounce">
+                            <div className="text-center">
+                              <div className="text-6xl mb-2">🏆🏆🏆</div>
+                              <div className="pixel-text text-2xl neon-text-magenta mb-2">ACHIEVEMENT UNLOCKED!</div>
+                              <div className="pixel-text text-lg neon-text-yellow">5-Minute Master</div>
+                              <div className="pixel-text text-sm neon-text-cyan mt-2">+3 Trophies Added to Profile!</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Controls Help */}
-                    <div className="mt-4 text-center pixel-text text-xs neon-text-cyan">
-                      USE ARROW KEYS TO MOVE  •  EAT FOOD TO GROW
+                    <div className="mt-4 text-center space-y-1">
+                      <div className="pixel-text text-xs neon-text-cyan">
+                        USE ARROW KEYS TO MOVE  •  EAT FOOD TO GROW
+                      </div>
+                      {playTime < 300 && (
+                        <div className="pixel-text text-xs neon-text-magenta animate-pulse">
+                          🏆 Play for 5 minutes to earn 3 trophies! ({formatTime(300 - playTime)} remaining)
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
