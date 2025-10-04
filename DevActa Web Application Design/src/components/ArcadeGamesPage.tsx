@@ -67,6 +67,40 @@ const PINBALL_BUMPERS = [
   { x: 200, y: 100, r: 22, score: 25 },
 ];
 
+// Breakout game constants - MUCH BIGGER SCREEN
+const BREAKOUT_WIDTH = 600;
+const BREAKOUT_HEIGHT = 800;
+const BREAKOUT_PADDLE_WIDTH = 120;
+const BREAKOUT_PADDLE_HEIGHT = 18;
+const BREAKOUT_BALL_RADIUS = 15;
+const BREAKOUT_BRICK_ROWS = 6;
+const BREAKOUT_BRICK_COLS = 10;
+const BREAKOUT_BRICK_WIDTH = 55;
+const BREAKOUT_BRICK_HEIGHT = 25;
+const BREAKOUT_BRICK_PADDING = 5;
+
+// Flappy Bird game constants
+const FLAPPY_WIDTH = 600;
+const FLAPPY_HEIGHT = 800;
+const FLAPPY_BIRD_SIZE = 40;
+const FLAPPY_GRAVITY = 0.4; // Reduced gravity for easier control
+const FLAPPY_JUMP = -10; // Adjusted jump to match new gravity
+const FLAPPY_PIPE_WIDTH = 80;
+const FLAPPY_PIPE_GAP = 220; // Increased gap for easier gameplay
+const FLAPPY_PIPE_SPEED = 3;
+
+// Car Race game constants
+const CAR_WIDTH = 600;
+const CAR_HEIGHT = 800;
+const CAR_PLAYER_WIDTH = 60;
+const CAR_PLAYER_HEIGHT = 100;
+const CAR_OBSTACLE_WIDTH = 60;
+const CAR_OBSTACLE_HEIGHT = 100;
+const CAR_OBSTACLE_SPEED = 7;
+const CAR_LANE_WIDTH = 120;
+const CAR_NUM_LANES = 4;
+const CAR_ROAD_WIDTH = CAR_LANE_WIDTH * CAR_NUM_LANES;
+
 interface ArcadeGamesPageProps {
   onGameSelect?: (gameId: number, gameTitle: string) => void;
 }
@@ -75,7 +109,7 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [coins, setCoins] = useState(5);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentGameType, setCurrentGameType] = useState<'snake' | 'tetris' | 'pac-man' | 'pinball'>('snake');
+  const [currentGameType, setCurrentGameType] = useState<'snake' | 'tetris' | 'pac-man' | 'pinball' | 'breakout' | 'flappy' | 'car-race'>('snake');
   
   // Snake game state
   const [snake, setSnake] = useState([{ x: 10, y: 10 }]);
@@ -101,6 +135,30 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   const [rightFlipper, setRightFlipper] = useState(false);
   const pinballCanvasRef = useRef<HTMLCanvasElement>(null);
   
+  // Breakout game state
+  const [breakoutPaddleX, setBreakoutPaddleX] = useState(BREAKOUT_WIDTH / 2 - BREAKOUT_PADDLE_WIDTH / 2);
+  const [breakoutBall, setBreakoutBall] = useState({ x: BREAKOUT_WIDTH / 2, y: BREAKOUT_HEIGHT - 100, dx: 6, dy: -6 });
+  const [breakoutBricks, setBreakoutBricks] = useState<Array<{x: number, y: number, status: boolean}>>([]);
+  const breakoutCanvasRef = useRef<HTMLCanvasElement>(null);
+  const breakoutBallRef = useRef(breakoutBall);
+  const breakoutBricksRef = useRef(breakoutBricks);
+  const breakoutPaddleXRef = useRef(breakoutPaddleX);
+  
+  // Flappy Bird game state
+  const [flappyBird, setFlappyBird] = useState({ x: 100, y: FLAPPY_HEIGHT / 2, vy: 0 });
+  const [flappyPipes, setFlappyPipes] = useState<Array<{x: number, y: number}>>([]);
+  const flappyCanvasRef = useRef<HTMLCanvasElement>(null);
+  const flappyBirdRef = useRef(flappyBird);
+  const flappyPipesRef = useRef(flappyPipes);
+  
+  // Car Race game state
+  const [carPlayer, setCarPlayer] = useState({ x: CAR_WIDTH / 2 - CAR_PLAYER_WIDTH / 2, y: CAR_HEIGHT - CAR_PLAYER_HEIGHT - 20 });
+  const [carObstacles, setCarObstacles] = useState<Array<{x: number, y: number}>>([]);
+  const [carRoadOffset, setCarRoadOffset] = useState(0);
+  const carCanvasRef = useRef<HTMLCanvasElement>(null);
+  const carPlayerRef = useRef(carPlayer);
+  const carObstaclesRef = useRef(carObstacles);
+  
   // Common game state
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
@@ -122,6 +180,11 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
           setShowTrophyNotification(true);
           // Hide notification after 5 seconds
           setTimeout(() => setShowTrophyNotification(false), 5000);
+          
+          // End Flappy Bird and Car Race games after 1 minute
+          if (currentGameType === 'flappy' || currentGameType === 'car-race') {
+            setGameOver(true);
+          }
         }
         
         return newTime;
@@ -698,14 +761,14 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   const handleSelectGame = () => {
     if (coins > 0) {
       const currentGame = mockGames[currentIndex];
-      const gameType = currentGame.title.toLowerCase();
+      const gameType = currentGame.title.toLowerCase().replace(/\s+/g, '-');
       
       setCoins(coins - 1);
       setIsPlaying(true);
       setGameOver(false);
       setScore(0);
       setPlayTime(0);
-      setCurrentGameType(gameType as 'snake' | 'tetris' | 'pac-man' | 'pinball');
+      setCurrentGameType(gameType as 'snake' | 'tetris' | 'pac-man' | 'pinball' | 'breakout' | 'flappy' | 'car-race');
       
       // Initialize game-specific state
       if (gameType === 'snake') {
@@ -730,6 +793,20 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
         });
         setLeftFlipper(false);
         setRightFlipper(false);
+      } else if (gameType === 'breakout') {
+        setBreakoutPaddleX(BREAKOUT_WIDTH / 2 - BREAKOUT_PADDLE_WIDTH / 2);
+        setBreakoutBall({ x: BREAKOUT_WIDTH / 2, y: BREAKOUT_HEIGHT - 120, dx: 7, dy: -7 });
+        setBreakoutBricks([]);
+      } else if (gameType === 'flappy') {
+        setFlappyBird({ x: 100, y: FLAPPY_HEIGHT / 2, vy: 0 });
+        setFlappyPipes([]);
+      } else if (gameType === 'car-race') {
+        const roadStartX = (CAR_WIDTH - CAR_ROAD_WIDTH) / 2;
+        const startLane = 1; // Start in second lane
+        const startX = roadStartX + (startLane * CAR_LANE_WIDTH) + (CAR_LANE_WIDTH - CAR_PLAYER_WIDTH) / 2;
+        setCarPlayer({ x: startX, y: CAR_HEIGHT - CAR_PLAYER_HEIGHT - 30 });
+        setCarObstacles([]);
+        setCarRoadOffset(0);
       }
     }
   };
@@ -790,16 +867,41 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
               }));
             }
           }
+        } else if (currentGameType === 'breakout') {
+          // Breakout controls handled by mouse
+        } else if (currentGameType === 'car-race') {
+          // Car Race controls - move between lanes
+          const roadStartX = (CAR_WIDTH - CAR_ROAD_WIDTH) / 2;
+          const roadEndX = roadStartX + CAR_ROAD_WIDTH;
+          
+          if (e.key === "ArrowLeft") {
+            setCarPlayer(prev => {
+              let newX = prev.x - CAR_LANE_WIDTH;
+              // Keep within road bounds
+              if (newX < roadStartX) newX = roadStartX + (CAR_LANE_WIDTH - CAR_PLAYER_WIDTH) / 2;
+              return { ...prev, x: newX };
+            });
+          } else if (e.key === "ArrowRight") {
+            setCarPlayer(prev => {
+              let newX = prev.x + CAR_LANE_WIDTH;
+              // Keep within road bounds
+              if (newX + CAR_PLAYER_WIDTH > roadEndX) {
+                const lastLane = CAR_NUM_LANES - 1;
+                newX = roadStartX + (lastLane * CAR_LANE_WIDTH) + (CAR_LANE_WIDTH - CAR_PLAYER_WIDTH) / 2;
+              }
+              return { ...prev, x: newX };
+            });
+          }
         }
       } else {
         // Menu navigation
-        if (e.key === "ArrowLeft") {
-          navigateLeft();
-        } else if (e.key === "ArrowRight") {
-          navigateRight();
-        } else if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          handleSelectGame();
+      if (e.key === "ArrowLeft") {
+        navigateLeft();
+      } else if (e.key === "ArrowRight") {
+        navigateRight();
+      } else if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handleSelectGame();
         }
       }
     };
@@ -832,6 +934,558 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
       document.removeEventListener("keyup", handleKeyUp);
     };
   }, [isPlaying, currentGameType]);
+
+  // Update Breakout refs when state changes
+  useEffect(() => {
+    breakoutBallRef.current = breakoutBall;
+  }, [breakoutBall]);
+
+  useEffect(() => {
+    breakoutBricksRef.current = breakoutBricks;
+  }, [breakoutBricks]);
+
+  useEffect(() => {
+    breakoutPaddleXRef.current = breakoutPaddleX;
+  }, [breakoutPaddleX]);
+
+  // Breakout game logic
+  const initializeBreakoutBricks = () => {
+    const tempBricks: Array<{x: number, y: number, status: boolean}> = [];
+    for (let r = 0; r < BREAKOUT_BRICK_ROWS; r++) {
+      for (let c = 0; c < BREAKOUT_BRICK_COLS; c++) {
+        tempBricks.push({
+          x: c * (BREAKOUT_BRICK_WIDTH + BREAKOUT_BRICK_PADDING) + 25,
+          y: r * (BREAKOUT_BRICK_HEIGHT + BREAKOUT_BRICK_PADDING) + 50,
+          status: true,
+        });
+      }
+    }
+    setBreakoutBricks(tempBricks);
+  };
+
+  const breakoutDraw = (ctx: CanvasRenderingContext2D) => {
+    const ball = breakoutBallRef.current;
+    const bricks = breakoutBricksRef.current;
+    const paddleX = breakoutPaddleXRef.current;
+    
+    ctx.clearRect(0, 0, BREAKOUT_WIDTH, BREAKOUT_HEIGHT);
+    
+    // Draw background with gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, BREAKOUT_HEIGHT);
+    gradient.addColorStop(0, '#0a0a0a');
+    gradient.addColorStop(1, '#1a1a1a');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, BREAKOUT_WIDTH, BREAKOUT_HEIGHT);
+
+    // Draw ball with enhanced glow
+    ctx.shadowColor = "#FFD700";
+    ctx.shadowBlur = 20;
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, BREAKOUT_BALL_RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle = "#FFD700";
+    ctx.fill();
+    ctx.strokeStyle = "#FFA500";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.closePath();
+    ctx.shadowBlur = 0;
+
+    // Draw paddle with enhanced glow
+    ctx.shadowColor = "#00FFFF";
+    ctx.shadowBlur = 15;
+    ctx.fillStyle = "#00FFFF";
+    ctx.fillRect(paddleX, BREAKOUT_HEIGHT - BREAKOUT_PADDLE_HEIGHT - 20, BREAKOUT_PADDLE_WIDTH, BREAKOUT_PADDLE_HEIGHT);
+    ctx.strokeStyle = "#00AAAA";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(paddleX, BREAKOUT_HEIGHT - BREAKOUT_PADDLE_HEIGHT - 20, BREAKOUT_PADDLE_WIDTH, BREAKOUT_PADDLE_HEIGHT);
+    ctx.shadowBlur = 0;
+
+    // Draw bricks with enhanced effects
+    bricks.forEach((brick) => {
+      if (brick.status) {
+        ctx.shadowColor = "#FF0000";
+        ctx.shadowBlur = 8;
+        ctx.fillStyle = "#FF0000";
+        ctx.fillRect(brick.x, brick.y, BREAKOUT_BRICK_WIDTH, BREAKOUT_BRICK_HEIGHT);
+        ctx.strokeStyle = "#FF6666";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(brick.x, brick.y, BREAKOUT_BRICK_WIDTH, BREAKOUT_BRICK_HEIGHT);
+        ctx.shadowBlur = 0;
+      }
+    });
+
+    // Draw score with better styling
+    ctx.font = "bold 32px Arial";
+    ctx.fillStyle = "#FFFFFF";
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 3;
+    ctx.strokeText("Score: " + score, 20, 50);
+    ctx.fillText("Score: " + score, 20, 50);
+  };
+
+  const breakoutUpdate = () => {
+    if (gameOver) return;
+
+    let newBall = { ...breakoutBallRef.current };
+    newBall.x += newBall.dx;
+    newBall.y += newBall.dy;
+
+    // Wall collisions - FIXED BOUNCING
+    if (newBall.x + BREAKOUT_BALL_RADIUS >= BREAKOUT_WIDTH || newBall.x - BREAKOUT_BALL_RADIUS <= 0) {
+      newBall.dx = -newBall.dx;
+      // Keep ball in bounds
+      if (newBall.x + BREAKOUT_BALL_RADIUS >= BREAKOUT_WIDTH) {
+        newBall.x = BREAKOUT_WIDTH - BREAKOUT_BALL_RADIUS;
+      }
+      if (newBall.x - BREAKOUT_BALL_RADIUS <= 0) {
+        newBall.x = BREAKOUT_BALL_RADIUS;
+      }
+    }
+    
+    if (newBall.y - BREAKOUT_BALL_RADIUS <= 0) {
+      newBall.dy = -newBall.dy;
+      newBall.y = BREAKOUT_BALL_RADIUS;
+    }
+
+    // Paddle collision - FIXED BOUNCING
+    const paddleX = breakoutPaddleXRef.current;
+    if (
+      newBall.y + BREAKOUT_BALL_RADIUS >= BREAKOUT_HEIGHT - BREAKOUT_PADDLE_HEIGHT - 20 &&
+      newBall.x >= paddleX &&
+      newBall.x <= paddleX + BREAKOUT_PADDLE_WIDTH &&
+      newBall.dy > 0 // Only bounce if ball is moving down
+    ) {
+      newBall.dy = -Math.abs(newBall.dy); // Always bounce up
+      newBall.y = BREAKOUT_HEIGHT - BREAKOUT_PADDLE_HEIGHT - 20 - BREAKOUT_BALL_RADIUS;
+      // Add some angle based on where ball hits paddle
+      const hitPos = (newBall.x - paddleX) / BREAKOUT_PADDLE_WIDTH;
+      newBall.dx = (hitPos - 0.5) * 12; // Stronger angle
+    }
+
+    // Brick collisions - FIXED BOUNCING
+    let brickHit = false;
+    const newBricks = breakoutBricksRef.current.map((brick) => {
+      if (brick.status && !brickHit) {
+        // More accurate collision detection
+        const ballLeft = newBall.x - BREAKOUT_BALL_RADIUS;
+        const ballRight = newBall.x + BREAKOUT_BALL_RADIUS;
+        const ballTop = newBall.y - BREAKOUT_BALL_RADIUS;
+        const ballBottom = newBall.y + BREAKOUT_BALL_RADIUS;
+        
+        const brickLeft = brick.x;
+        const brickRight = brick.x + BREAKOUT_BRICK_WIDTH;
+        const brickTop = brick.y;
+        const brickBottom = brick.y + BREAKOUT_BRICK_HEIGHT;
+        
+        if (ballRight > brickLeft && ballLeft < brickRight && 
+            ballBottom > brickTop && ballTop < brickBottom) {
+          brickHit = true;
+          setScore(prev => prev + 10);
+          
+          // Determine collision side and bounce accordingly
+          const overlapX = Math.min(ballRight - brickLeft, brickRight - ballLeft);
+          const overlapY = Math.min(ballBottom - brickTop, brickBottom - ballTop);
+          
+          if (overlapX < overlapY) {
+            // Hit from side
+            newBall.dx = -newBall.dx;
+          } else {
+            // Hit from top/bottom
+            newBall.dy = -newBall.dy;
+          }
+          
+          return { ...brick, status: false };
+        }
+      }
+      return brick;
+    });
+
+    setBreakoutBricks(newBricks);
+
+    // Check game over - ball falls below paddle
+    if (newBall.y + BREAKOUT_BALL_RADIUS > BREAKOUT_HEIGHT) {
+      setGameOver(true);
+      return;
+    }
+
+    setBreakoutBall(newBall);
+
+    if (breakoutCanvasRef.current) {
+      const ctx = breakoutCanvasRef.current.getContext("2d");
+      if (ctx) breakoutDraw(ctx);
+    }
+  };
+
+  // Breakout game logic
+  useEffect(() => {
+    if (!isPlaying || gameOver || currentGameType !== 'breakout') return;
+
+    // Initialize bricks only once
+    if (breakoutBricksRef.current.length === 0) {
+      initializeBreakoutBricks();
+    }
+
+    // Initialize canvas
+    if (breakoutCanvasRef.current) {
+      const ctx = breakoutCanvasRef.current.getContext("2d");
+      if (ctx) breakoutDraw(ctx);
+    }
+
+    const breakoutInterval = setInterval(() => {
+      breakoutUpdate();
+    }, 16);
+
+    return () => clearInterval(breakoutInterval);
+  }, [isPlaying, gameOver, currentGameType]);
+
+  // Breakout mouse controls
+  useEffect(() => {
+    if (!isPlaying || currentGameType !== 'breakout') return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (breakoutCanvasRef.current) {
+        const rect = breakoutCanvasRef.current.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        let newX = mouseX - BREAKOUT_PADDLE_WIDTH / 2;
+        if (newX < 0) newX = 0;
+        if (newX + BREAKOUT_PADDLE_WIDTH > BREAKOUT_WIDTH) newX = BREAKOUT_WIDTH - BREAKOUT_PADDLE_WIDTH;
+        setBreakoutPaddleX(newX);
+      }
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    return () => document.removeEventListener("mousemove", handleMouseMove);
+  }, [isPlaying, currentGameType]);
+
+  // Update Flappy refs when state changes
+  useEffect(() => {
+    flappyBirdRef.current = flappyBird;
+  }, [flappyBird]);
+
+  useEffect(() => {
+    flappyPipesRef.current = flappyPipes;
+  }, [flappyPipes]);
+
+  // Flappy Bird game logic
+  const flappyDraw = (ctx: CanvasRenderingContext2D) => {
+    const bird = flappyBirdRef.current;
+    const pipes = flappyPipesRef.current;
+    
+    ctx.clearRect(0, 0, FLAPPY_WIDTH, FLAPPY_HEIGHT);
+    
+    // Background gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, FLAPPY_HEIGHT);
+    gradient.addColorStop(0, '#87CEEB');
+    gradient.addColorStop(1, '#4682B4');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, FLAPPY_WIDTH, FLAPPY_HEIGHT);
+
+    // Bird with glow
+    ctx.shadowColor = "#FFD700";
+    ctx.shadowBlur = 15;
+    ctx.fillStyle = "#FFD700";
+    ctx.fillRect(bird.x, bird.y, FLAPPY_BIRD_SIZE, FLAPPY_BIRD_SIZE);
+    ctx.strokeStyle = "#FFA500";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(bird.x, bird.y, FLAPPY_BIRD_SIZE, FLAPPY_BIRD_SIZE);
+    ctx.shadowBlur = 0;
+
+    // Pipes with glow
+    ctx.shadowColor = "#00FF00";
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = "#00AA00";
+    pipes.forEach((p) => {
+      // Top pipe
+      ctx.fillRect(p.x, 0, FLAPPY_PIPE_WIDTH, p.y);
+      ctx.strokeStyle = "#00FF00";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(p.x, 0, FLAPPY_PIPE_WIDTH, p.y);
+      
+      // Bottom pipe
+      ctx.fillRect(p.x, p.y + FLAPPY_PIPE_GAP, FLAPPY_PIPE_WIDTH, FLAPPY_HEIGHT - p.y - FLAPPY_PIPE_GAP);
+      ctx.strokeRect(p.x, p.y + FLAPPY_PIPE_GAP, FLAPPY_PIPE_WIDTH, FLAPPY_HEIGHT - p.y - FLAPPY_PIPE_GAP);
+    });
+    ctx.shadowBlur = 0;
+
+    // Score
+    ctx.font = "bold 36px Arial";
+    ctx.fillStyle = "#FFFFFF";
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 3;
+    ctx.strokeText("Score: " + score, 20, 50);
+    ctx.fillText("Score: " + score, 20, 50);
+  };
+
+  const flappyUpdate = () => {
+    if (gameOver) return;
+
+    // Bird physics
+    let newBird = { ...flappyBirdRef.current };
+    newBird.vy += FLAPPY_GRAVITY;
+    newBird.y += newBird.vy;
+
+    // Floor & ceiling collision
+    if (newBird.y + FLAPPY_BIRD_SIZE > FLAPPY_HEIGHT || newBird.y < 0) {
+      setGameOver(true);
+      return;
+    }
+
+    // Pipes movement
+    let newPipes = flappyPipesRef.current.map((p) => ({ ...p, x: p.x - FLAPPY_PIPE_SPEED }));
+    
+    // Remove off-screen pipes and add score
+    if (newPipes.length > 0 && newPipes[0].x + FLAPPY_PIPE_WIDTH < 0) {
+      newPipes.shift();
+      setScore((prev) => prev + 10);
+    }
+
+    // Add new pipe with better spacing
+    if (newPipes.length === 0 || newPipes[newPipes.length - 1].x < FLAPPY_WIDTH - 350) {
+      newPipes.push({
+        x: FLAPPY_WIDTH,
+        y: Math.random() * (FLAPPY_HEIGHT - FLAPPY_PIPE_GAP - 200) + 100,
+      });
+    }
+
+    // Collision detection with pipes
+    for (let p of newPipes) {
+      if (
+        newBird.x + FLAPPY_BIRD_SIZE > p.x &&
+        newBird.x < p.x + FLAPPY_PIPE_WIDTH &&
+        (newBird.y < p.y || newBird.y + FLAPPY_BIRD_SIZE > p.y + FLAPPY_PIPE_GAP)
+      ) {
+        setGameOver(true);
+        return;
+      }
+    }
+
+    setFlappyBird(newBird);
+    setFlappyPipes(newPipes);
+
+    if (flappyCanvasRef.current) {
+      const ctx = flappyCanvasRef.current.getContext("2d");
+      if (ctx) flappyDraw(ctx);
+    }
+  };
+
+  // Flappy Bird game loop
+  useEffect(() => {
+    if (!isPlaying || gameOver || currentGameType !== 'flappy') return;
+
+    // Initialize pipes
+    if (flappyPipesRef.current.length === 0) {
+      setFlappyPipes([{ x: FLAPPY_WIDTH, y: Math.random() * (FLAPPY_HEIGHT - FLAPPY_PIPE_GAP - 200) + 100 }]);
+    }
+
+    // Initialize canvas
+    if (flappyCanvasRef.current) {
+      const ctx = flappyCanvasRef.current.getContext("2d");
+      if (ctx) flappyDraw(ctx);
+    }
+
+    const flappyInterval = setInterval(() => {
+      flappyUpdate();
+    }, 20);
+
+    return () => clearInterval(flappyInterval);
+  }, [isPlaying, gameOver, currentGameType]);
+
+  // Flappy Bird click/tap controls
+  const handleFlappyJump = () => {
+    if (isPlaying && currentGameType === 'flappy' && !gameOver) {
+      setFlappyBird(prev => ({ ...prev, vy: FLAPPY_JUMP }));
+    }
+  };
+
+  // Update Car refs when state changes
+  useEffect(() => {
+    carPlayerRef.current = carPlayer;
+  }, [carPlayer]);
+
+  useEffect(() => {
+    carObstaclesRef.current = carObstacles;
+  }, [carObstacles]);
+
+  // Car Race game logic
+  const drawCar = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, isPlayer: boolean) => {
+    const width = isPlayer ? CAR_PLAYER_WIDTH : CAR_OBSTACLE_WIDTH;
+    const height = isPlayer ? CAR_PLAYER_HEIGHT : CAR_OBSTACLE_HEIGHT;
+    
+    // Car body
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(x, y, width, height, 8);
+    ctx.fill();
+    
+    // Car roof (darker)
+    ctx.fillStyle = isPlayer ? "#AA0000" : "#006666";
+    ctx.beginPath();
+    ctx.roundRect(x + 5, y + height * 0.3, width - 10, height * 0.3, 5);
+    ctx.fill();
+    
+    // Windows
+    ctx.fillStyle = "#1a1a2e";
+    ctx.fillRect(x + 8, y + height * 0.35, width - 16, height * 0.15);
+    ctx.fillRect(x + 8, y + height * 0.52, width - 16, height * 0.15);
+    
+    // Headlights/Taillights
+    if (isPlayer) {
+      // Taillights (red)
+      ctx.fillStyle = "#FF0000";
+      ctx.fillRect(x + 5, y + height - 8, 15, 6);
+      ctx.fillRect(x + width - 20, y + height - 8, 15, 6);
+    } else {
+      // Headlights (yellow)
+      ctx.fillStyle = "#FFFF00";
+      ctx.fillRect(x + 5, y + 2, 15, 6);
+      ctx.fillRect(x + width - 20, y + 2, 15, 6);
+    }
+    
+    // Wheels
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(x - 3, y + 15, 8, 20);
+    ctx.fillRect(x + width - 5, y + 15, 8, 20);
+    ctx.fillRect(x - 3, y + height - 35, 8, 20);
+    ctx.fillRect(x + width - 5, y + height - 35, 8, 20);
+    
+    ctx.shadowBlur = 0;
+  };
+
+  const carDraw = (ctx: CanvasRenderingContext2D) => {
+    const player = carPlayerRef.current;
+    const obstacles = carObstaclesRef.current;
+    
+    ctx.clearRect(0, 0, CAR_WIDTH, CAR_HEIGHT);
+    
+    // Grass/shoulder
+    ctx.fillStyle = "#2d5016";
+    ctx.fillRect(0, 0, CAR_WIDTH, CAR_HEIGHT);
+    
+    // Road background
+    const roadStartX = (CAR_WIDTH - CAR_ROAD_WIDTH) / 2;
+    ctx.fillStyle = "#3a3a3a";
+    ctx.fillRect(roadStartX, 0, CAR_ROAD_WIDTH, CAR_HEIGHT);
+    
+    // Road edges (white lines)
+    ctx.strokeStyle = "#FFFFFF";
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(roadStartX, 0);
+    ctx.lineTo(roadStartX, CAR_HEIGHT);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(roadStartX + CAR_ROAD_WIDTH, 0);
+    ctx.lineTo(roadStartX + CAR_ROAD_WIDTH, CAR_HEIGHT);
+    ctx.stroke();
+
+    // Lane dividers (animated dashed lines)
+    ctx.strokeStyle = "#FFD700";
+    ctx.lineWidth = 4;
+    for (let lane = 1; lane < CAR_NUM_LANES; lane++) {
+      const laneX = roadStartX + (lane * CAR_LANE_WIDTH);
+      for (let i = carRoadOffset; i < CAR_HEIGHT; i += 60) {
+        ctx.beginPath();
+        ctx.moveTo(laneX, i);
+        ctx.lineTo(laneX, i + 30);
+        ctx.stroke();
+      }
+    }
+
+    // Draw obstacles (enemy cars)
+    obstacles.forEach((o) => {
+      drawCar(ctx, o.x, o.y, "#00FFFF", false);
+    });
+
+    // Draw player car
+    drawCar(ctx, player.x, player.y, "#FF0000", true);
+
+    // Score
+    ctx.font = "bold 36px Arial";
+    ctx.fillStyle = "#FFFFFF";
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 3;
+    ctx.strokeText("Score: " + score, 20, 50);
+    ctx.fillText("Score: " + score, 20, 50);
+  };
+
+  const getRandomLane = () => {
+    const roadStartX = (CAR_WIDTH - CAR_ROAD_WIDTH) / 2;
+    const lane = Math.floor(Math.random() * CAR_NUM_LANES);
+    return roadStartX + (lane * CAR_LANE_WIDTH) + (CAR_LANE_WIDTH - CAR_OBSTACLE_WIDTH) / 2;
+  };
+
+  const carUpdate = () => {
+    if (gameOver) return;
+
+    // Animate road lines
+    setCarRoadOffset(prev => (prev + CAR_OBSTACLE_SPEED) % 60);
+
+    // Move obstacles
+    let newObstacles = carObstaclesRef.current.map((o) => ({ ...o, y: o.y + CAR_OBSTACLE_SPEED }));
+
+    // Reset obstacles that pass the bottom
+    newObstacles = newObstacles.map((o) => {
+      if (o.y > CAR_HEIGHT) {
+        setScore((prev) => prev + 10);
+        return { x: getRandomLane(), y: -CAR_OBSTACLE_HEIGHT };
+      }
+      return o;
+    });
+
+    // Collision detection
+    const player = carPlayerRef.current;
+    for (let o of newObstacles) {
+      if (
+        player.x < o.x + CAR_OBSTACLE_WIDTH &&
+        player.x + CAR_PLAYER_WIDTH > o.x &&
+        player.y < o.y + CAR_OBSTACLE_HEIGHT &&
+        player.y + CAR_PLAYER_HEIGHT > o.y
+      ) {
+        setGameOver(true);
+        return;
+      }
+    }
+
+    setCarObstacles(newObstacles);
+
+    if (carCanvasRef.current) {
+      const ctx = carCanvasRef.current.getContext("2d");
+      if (ctx) carDraw(ctx);
+    }
+  };
+
+  // Car Race game loop
+  useEffect(() => {
+    if (!isPlaying || gameOver || currentGameType !== 'car-race') return;
+
+    // Initialize obstacles in lanes
+    if (carObstaclesRef.current.length === 0) {
+      const roadStartX = (CAR_WIDTH - CAR_ROAD_WIDTH) / 2;
+      const initialObstacles = [];
+      for (let i = 0; i < 5; i++) {
+        const lane = Math.floor(Math.random() * CAR_NUM_LANES);
+        initialObstacles.push({
+          x: roadStartX + (lane * CAR_LANE_WIDTH) + (CAR_LANE_WIDTH - CAR_OBSTACLE_WIDTH) / 2,
+          y: -i * 200,
+        });
+      }
+      setCarObstacles(initialObstacles);
+    }
+
+    // Initialize canvas
+    if (carCanvasRef.current) {
+      const ctx = carCanvasRef.current.getContext("2d");
+      if (ctx) carDraw(ctx);
+    }
+
+    const carInterval = setInterval(() => {
+      carUpdate();
+    }, 20);
+
+    return () => clearInterval(carInterval);
+  }, [isPlaying, gameOver, currentGameType]);
 
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -1133,6 +1787,89 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
                           </div>
                         </div>
                       )}
+
+                      {/* Breakout Game */}
+                      {currentGameType === 'breakout' && (
+                        <div className="flex flex-col items-center justify-center w-full h-full">
+                          <canvas 
+                            ref={breakoutCanvasRef} 
+                            width={BREAKOUT_WIDTH} 
+                            height={BREAKOUT_HEIGHT} 
+                            style={{ 
+                              backgroundColor: "#111", 
+                              border: "4px solid #4169E1",
+                              borderRadius: "12px",
+                              boxShadow: "0 0 30px #4169E1",
+                              maxWidth: "90vw",
+                              maxHeight: "90vh"
+                            }} 
+                          />
+                          <div className="mt-6 text-center">
+                            <div className="pixel-text text-lg neon-text-cyan mb-3">
+                              🖱️ MOUSE: MOVE PADDLE • BREAK ALL BRICKS!
+                            </div>
+                            <div className="pixel-text text-sm neon-text-yellow">
+                              Keep ball in play! Don't let it fall! Game ends in 1 minute!
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Flappy Bird Game */}
+                      {currentGameType === 'flappy' && (
+                        <div className="flex flex-col items-center justify-center w-full h-full">
+                          <canvas 
+                            ref={flappyCanvasRef} 
+                            width={FLAPPY_WIDTH} 
+                            height={FLAPPY_HEIGHT} 
+                            onClick={handleFlappyJump}
+                            style={{ 
+                              backgroundColor: "#87CEEB", 
+                              border: "4px solid #4169E1",
+                              borderRadius: "12px",
+                              boxShadow: "0 0 30px #4169E1",
+                              maxWidth: "90vw",
+                              maxHeight: "90vh",
+                              cursor: "pointer"
+                            }} 
+                          />
+                          <div className="mt-6 text-center">
+                            <div className="pixel-text text-lg neon-text-cyan mb-3">
+                              🐦 CLICK/TAP: JUMP • AVOID PIPES!
+                            </div>
+                            <div className="pixel-text text-sm neon-text-yellow">
+                              Keep the bird flying! Don't hit pipes or ground! Game ends in 1 minute!
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Car Race Game */}
+                      {currentGameType === 'car-race' && (
+                        <div className="flex flex-col items-center justify-center w-full h-full">
+                          <canvas 
+                            ref={carCanvasRef} 
+                            width={CAR_WIDTH} 
+                            height={CAR_HEIGHT} 
+                            style={{ 
+                              backgroundColor: "#2a2a2a", 
+                              border: "4px solid #4169E1",
+                              borderRadius: "12px",
+                              boxShadow: "0 0 30px #4169E1",
+                              maxWidth: "90vw",
+                              maxHeight: "90vh"
+                            }} 
+                          />
+                          <div className="mt-6 text-center">
+                            <div className="pixel-text text-lg neon-text-cyan mb-3">
+                              🏎️ LEFT/RIGHT ARROWS: STEER • DODGE TRAFFIC!
+                            </div>
+                            <div className="pixel-text text-sm neon-text-yellow">
+                              Avoid obstacles! Don't crash! Game ends in 1 minute!
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Game Over Overlay */}
                       {gameOver && (
@@ -1194,6 +1931,21 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
                       {currentGameType === 'pinball' && (
                         <div className="pixel-text text-xs neon-text-cyan">
                           LEFT/RIGHT ARROWS: FLIPPERS  •  SPACE: LAUNCH BALL  •  HIT BUMPERS FOR POINTS
+                        </div>
+                      )}
+                      {currentGameType === 'breakout' && (
+                        <div className="pixel-text text-sm neon-text-cyan">
+                          🖱️ MOUSE: MOVE PADDLE  •  BREAK ALL BRICKS  •  KEEP BALL IN PLAY
+                        </div>
+                      )}
+                      {currentGameType === 'flappy' && (
+                        <div className="pixel-text text-sm neon-text-cyan">
+                          🐦 CLICK/TAP SCREEN: JUMP  •  AVOID PIPES  •  DON'T HIT GROUND
+                        </div>
+                      )}
+                      {currentGameType === 'car-race' && (
+                        <div className="pixel-text text-sm neon-text-cyan">
+                          🏎️ LEFT/RIGHT ARROWS: STEER  •  DODGE TRAFFIC  •  DON'T CRASH
                         </div>
                       )}
                       {playTime < 60 && (
