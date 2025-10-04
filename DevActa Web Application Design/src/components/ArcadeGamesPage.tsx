@@ -26,28 +26,33 @@ const PACMAN_PELLET = 2;
 const PACMAN_PLAYER = 3;
 const PACMAN_GHOST = 4;
 
-const PACMAN_ROWS = 12;
-const PACMAN_COLS = 12;
+const PACMAN_ROWS = 15;
+const PACMAN_COLS = 15;
 
 const INITIAL_PACMAN_MAP = [
-  [1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,2,2,2,2,1,2,2,2,2,2,1],
-  [1,2,1,1,2,1,2,1,1,1,2,1],
-  [1,2,2,2,2,2,2,2,2,1,2,1],
-  [1,2,1,1,1,1,1,1,2,1,2,1],
-  [1,2,2,2,2,2,2,2,2,1,2,1],
-  [1,1,1,1,1,1,1,1,2,1,2,1],
-  [1,2,2,2,2,2,2,2,2,2,2,1],
-  [1,2,1,1,1,1,1,1,1,1,2,1],
-  [1,2,2,2,2,2,2,2,2,2,2,1],
-  [1,4,1,1,1,1,1,1,1,1,4,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,2,2,2,2,1,2,2,2,1,2,2,2,2,1],
+  [1,2,1,1,2,1,2,1,2,1,2,1,1,2,1],
+  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+  [1,2,1,1,1,1,1,1,1,1,1,1,1,2,1],
+  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+  [1,2,1,1,1,1,1,1,1,1,1,1,1,2,1],
+  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+  [1,2,1,1,1,1,1,1,1,1,1,1,1,2,1],
+  [1,4,1,1,1,1,1,1,1,1,1,1,1,4,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
 ];
 
 const INITIAL_PACMAN_POS = { x: 1, y: 1 };
 const INITIAL_GHOSTS = [
-  { x: 1, y: 10 },
-  { x: 10, y: 10 },
+  { x: 1, y: 13, color: 'red', speed: 1 },
+  { x: 13, y: 13, color: 'pink', speed: 1 },
+  { x: 1, y: 7, color: 'cyan', speed: 1 },
+  { x: 13, y: 7, color: 'orange', speed: 1 },
 ];
 
 interface ArcadeGamesPageProps {
@@ -75,6 +80,8 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   const [pacmanMap, setPacmanMap] = useState(INITIAL_PACMAN_MAP.map(row => [...row]));
   const [pacmanPos, setPacmanPos] = useState(INITIAL_PACMAN_POS);
   const [ghosts, setGhosts] = useState(INITIAL_GHOSTS);
+  const [level, setLevel] = useState(1);
+  const [pelletsCollected, setPelletsCollected] = useState(0);
   
   // Common game state
   const [gameOver, setGameOver] = useState(false);
@@ -233,13 +240,52 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     const ny = pacmanPos.y + dy;
     
     if (pacmanMap[ny][nx] !== PACMAN_WALL) {
-      const newScore = pacmanMap[ny][nx] === PACMAN_PELLET ? score + 10 : score;
+      let newScore = score;
+      let newPelletsCollected = pelletsCollected;
+      
+      if (pacmanMap[ny][nx] === PACMAN_PELLET) {
+        newScore += 10;
+        newPelletsCollected += 1;
+        
+        // Check if level complete (all pellets collected)
+        const totalPellets = pacmanMap.flat().filter(cell => cell === PACMAN_PELLET).length;
+        if (totalPellets <= 1) { // Only the one we just collected
+          setLevel(prev => prev + 1);
+          setPelletsCollected(0);
+          // Reset map with more walls and enemies
+          const newMap = INITIAL_PACMAN_MAP.map(row => [...row]);
+          // Add more walls randomly
+          for (let i = 0; i < level * 5; i++) {
+            const x = Math.floor(Math.random() * PACMAN_COLS);
+            const y = Math.floor(Math.random() * PACMAN_ROWS);
+            if (newMap[y][x] === PACMAN_PELLET) {
+              newMap[y][x] = PACMAN_WALL;
+            }
+          }
+          setPacmanMap(newMap);
+          setPacmanPos(INITIAL_PACMAN_POS);
+          // Add more ghosts
+          const newGhosts = [...INITIAL_GHOSTS];
+          for (let i = 0; i < level; i++) {
+            newGhosts.push({
+              x: Math.floor(Math.random() * PACMAN_COLS),
+              y: Math.floor(Math.random() * PACMAN_ROWS),
+              color: ['red', 'pink', 'cyan', 'orange'][i % 4],
+              speed: 1 + level * 0.2
+            });
+          }
+          setGhosts(newGhosts);
+          return;
+        }
+      }
+      
       const newMap = pacmanMap.map(row => [...row]);
       newMap[pacmanPos.y][pacmanPos.x] = PACMAN_EMPTY;
       newMap[ny][nx] = PACMAN_PLAYER;
       setPacmanMap(newMap);
       setPacmanPos({ x: nx, y: ny });
       setScore(newScore);
+      setPelletsCollected(newPelletsCollected);
 
       // Check collisions with ghosts
       ghosts.forEach(g => {
@@ -252,6 +298,7 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     if (gameOver) return;
     
     const newGhosts = ghosts.map(g => {
+      // More aggressive AI - try to move towards Pac-Man
       const directions = [
         { dx: 0, dy: -1 },
         { dx: 0, dy: 1 },
@@ -259,16 +306,32 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
         { dx: 1, dy: 0 },
       ];
       
-      const valid = directions.filter(({ dx, dy }) => {
+      // Calculate distance to Pac-Man for each direction
+      const movesWithDistance = directions.map(({ dx, dy }) => {
         const nx = g.x + dx;
         const ny = g.y + dy;
-        return pacmanMap[ny][nx] !== PACMAN_WALL;
+        const distance = Math.abs(nx - pacmanPos.x) + Math.abs(ny - pacmanPos.y);
+        return { dx, dy, distance, nx, ny };
       });
       
-      if (valid.length === 0) return g;
+      // Filter valid moves (not walls)
+      const validMoves = movesWithDistance.filter(({ nx, ny }) => 
+        pacmanMap[ny] && pacmanMap[ny][nx] !== PACMAN_WALL
+      );
       
-      const move = valid[Math.floor(Math.random() * valid.length)];
-      return { x: g.x + move.dx, y: g.y + move.dy };
+      if (validMoves.length === 0) return g;
+      
+      // Choose move that gets closer to Pac-Man (more aggressive)
+      const bestMove = validMoves.reduce((best, current) => 
+        current.distance < best.distance ? current : best
+      );
+      
+      // Sometimes move randomly to make it less predictable
+      const move = Math.random() < 0.3 ? 
+        validMoves[Math.floor(Math.random() * validMoves.length)] : 
+        bestMove;
+      
+      return { ...g, x: move.nx, y: move.ny };
     });
 
     // Check collisions with Pac-Man
@@ -291,10 +354,10 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
 
     const ghostInterval = setInterval(() => {
       pacmanMoveGhosts();
-    }, 500);
+    }, Math.max(200, 500 - level * 50)); // Faster ghosts as level increases
 
     return () => clearInterval(ghostInterval);
-  }, [isPlaying, gameOver, currentGameType, pacmanPos, ghosts, pacmanMap]);
+  }, [isPlaying, gameOver, currentGameType, pacmanPos, ghosts, pacmanMap, level]);
 
   const navigateLeft = () => {
     setCurrentIndex((prev) => (prev === 0 ? mockGames.length - 1 : prev - 1));
@@ -328,6 +391,8 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
         setPacmanMap(INITIAL_PACMAN_MAP.map(row => [...row]));
         setPacmanPos(INITIAL_PACMAN_POS);
         setGhosts(INITIAL_GHOSTS);
+        setLevel(1);
+        setPelletsCollected(0);
       }
     }
   };
@@ -594,61 +659,84 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
                       })()}
 
                       {/* Pac-Man Game */}
-                      {currentGameType === 'pac-man' && (
-                        <div className="grid gap-1" style={{ 
-                          gridTemplateColumns: `repeat(${PACMAN_COLS}, 25px)`,
-                          gridTemplateRows: `repeat(${PACMAN_ROWS}, 25px)`,
-                          maxWidth: '350px',
-                          margin: '0 auto'
-                        }}>
-                          {pacmanMap.flat().map((cell, idx) => {
-                            let cellStyle: React.CSSProperties = {
-                              width: '25px',
-                              height: '25px',
-                              backgroundColor: '#222',
-                              borderRadius: '0%',
-                              border: '1px solid #333',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            };
-                            
-                            if (cell === PACMAN_WALL) {
-                              cellStyle.backgroundColor = '#000080';
-                              cellStyle.border = '1px solid #4169E1';
-                            } else if (cell === PACMAN_PELLET) {
-                              cellStyle.backgroundColor = '#222';
-                            } else if (cell === PACMAN_PLAYER) {
-                              cellStyle.backgroundColor = '#FFD700';
-                              cellStyle.borderRadius = '50%';
-                              cellStyle.boxShadow = '0 0 10px #FFD700';
-                            } else if (cell === PACMAN_GHOST) {
-                              cellStyle.backgroundColor = '#FF0000';
-                              cellStyle.borderRadius = '50%';
-                              cellStyle.boxShadow = '0 0 10px #FF0000';
-                            }
-                            
-                            return (
-                              <div
-                                key={idx}
-                                style={cellStyle}
-                              >
-                                {cell === PACMAN_PELLET && (
-                                  <div 
-                                    style={{
-                                      width: '6px',
-                                      height: '6px',
-                                      backgroundColor: '#FFD700',
-                                      borderRadius: '50%',
-                                      boxShadow: '0 0 4px #FFD700'
-                                    }}
-                                  />
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
+    {currentGameType === 'pac-man' && (
+      <div className="grid gap-1" style={{ 
+        gridTemplateColumns: `repeat(${PACMAN_COLS}, 20px)`,
+        gridTemplateRows: `repeat(${PACMAN_ROWS}, 20px)`,
+        maxWidth: '350px',
+        margin: '0 auto'
+      }}>
+        {pacmanMap.flat().map((cell, idx) => {
+          const row = Math.floor(idx / PACMAN_COLS);
+          const col = idx % PACMAN_COLS;
+          const ghost = ghosts.find(g => g.x === col && g.y === row);
+          
+          let cellStyle: React.CSSProperties = {
+            width: '20px',
+            height: '20px',
+            backgroundColor: '#222',
+            borderRadius: '0%',
+            border: '1px solid #333',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative'
+          };
+          
+          if (cell === PACMAN_WALL) {
+            cellStyle.backgroundColor = '#000080';
+            cellStyle.border = '1px solid #4169E1';
+          } else if (cell === PACMAN_PELLET) {
+            cellStyle.backgroundColor = '#222';
+          } else if (cell === PACMAN_PLAYER) {
+            cellStyle.backgroundColor = '#FFD700';
+            cellStyle.borderRadius = '50%';
+            cellStyle.boxShadow = '0 0 10px #FFD700';
+          } else if (cell === PACMAN_GHOST) {
+            cellStyle.backgroundColor = ghost?.color === 'red' ? '#FF0000' : 
+                                      ghost?.color === 'pink' ? '#FF69B4' :
+                                      ghost?.color === 'cyan' ? '#00FFFF' :
+                                      ghost?.color === 'orange' ? '#FFA500' : '#FF0000';
+            cellStyle.borderRadius = '50%';
+            cellStyle.boxShadow = `0 0 10px ${ghost?.color === 'red' ? '#FF0000' : 
+                                              ghost?.color === 'pink' ? '#FF69B4' :
+                                              ghost?.color === 'cyan' ? '#00FFFF' :
+                                              ghost?.color === 'orange' ? '#FFA500' : '#FF0000'}`;
+          }
+          
+          return (
+            <div
+              key={idx}
+              style={cellStyle}
+            >
+              {cell === PACMAN_PELLET && (
+                <div 
+                  style={{
+                    width: '4px',
+                    height: '4px',
+                    backgroundColor: '#FFD700',
+                    borderRadius: '50%',
+                    boxShadow: '0 0 4px #FFD700'
+                  }}
+                />
+              )}
+              {cell === PACMAN_GHOST && ghost && (
+                <div style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: '2px',
+                  width: '4px',
+                  height: '4px',
+                  backgroundColor: 'white',
+                  borderRadius: '50%',
+                  boxShadow: '4px 0 0 white, 0 4px 0 white, 4px 4px 0 white'
+                }} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    )}
                       
                       {/* Game Over Overlay */}
                       {gameOver && (
@@ -703,6 +791,8 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
                       {currentGameType === 'pac-man' && (
                         <div className="pixel-text text-xs neon-text-cyan">
                           ARROW KEYS: MOVE  •  COLLECT PELLETS  •  AVOID GHOSTS
+                          <div className="text-yellow-400">Level: {level} | Pellets: {pelletsCollected}</div>
+                          <div className="text-red-400">4 Ghosts hunting you!</div>
                         </div>
                       )}
                       {playTime < 300 && (
