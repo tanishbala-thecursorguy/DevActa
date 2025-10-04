@@ -83,6 +83,27 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     return () => clearInterval(gameInterval);
   }, [direction, food, isPlaying, gameOver]);
 
+  const navigateLeft = () => {
+    setCurrentIndex((prev) => (prev === 0 ? mockGames.length - 1 : prev - 1));
+  };
+
+  const navigateRight = () => {
+    setCurrentIndex((prev) => (prev === mockGames.length - 1 ? 0 : prev + 1));
+  };
+
+  const handleSelectGame = () => {
+    if (coins > 0) {
+      setCoins(coins - 1);
+      setIsPlaying(true);
+      setGameOver(false);
+      setScore(0);
+      setPlayTime(0);
+      setSnake([{ x: 10, y: 10 }]);
+      setDirection({ x: 0, y: 1 });
+      setFood({ x: 5, y: 5 });
+    }
+  };
+
   // Keyboard navigation and game controls
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -112,28 +133,7 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [currentIndex, isPlaying, direction]);
-
-  const navigateLeft = () => {
-    setCurrentIndex((prev) => (prev === 0 ? mockGames.length - 1 : prev - 1));
-  };
-
-  const navigateRight = () => {
-    setCurrentIndex((prev) => (prev === mockGames.length - 1 ? 0 : prev + 1));
-  };
-
-  const handleSelectGame = () => {
-    if (coins > 0) {
-      setCoins(coins - 1);
-      setIsPlaying(true);
-      setGameOver(false);
-      setScore(0);
-      setPlayTime(0);
-      setSnake([{ x: 10, y: 10 }]);
-      setDirection({ x: 0, y: 1 });
-      setFood({ x: 5, y: 5 });
-    }
-  };
+  }, [currentIndex, isPlaying, direction, coins]);
 
   const handleBackToMenu = () => {
     setIsPlaying(false);
