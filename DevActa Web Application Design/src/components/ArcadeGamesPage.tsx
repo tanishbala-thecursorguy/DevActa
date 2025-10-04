@@ -96,7 +96,7 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   const [pelletsCollected, setPelletsCollected] = useState(0);
   
   // Pinball game state
-  const [pinballBall, setPinballBall] = useState({ x: PINBALL_WIDTH / 2, y: PINBALL_HEIGHT - 30, vx: 2, vy: -5 });
+  const [pinballBall, setPinballBall] = useState({ x: PINBALL_WIDTH / 2, y: PINBALL_HEIGHT - 80, vx: 0, vy: 0 });
   const [leftFlipper, setLeftFlipper] = useState(false);
   const [rightFlipper, setRightFlipper] = useState(false);
   const pinballCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -381,52 +381,81 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   const pinballDraw = (ctx: CanvasRenderingContext2D) => {
     ctx.clearRect(0, 0, PINBALL_WIDTH, PINBALL_HEIGHT);
     
-    // Draw background
-    ctx.fillStyle = '#111';
+    // Draw background with gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, PINBALL_HEIGHT);
+    gradient.addColorStop(0, '#0a0a0a');
+    gradient.addColorStop(1, '#1a1a1a');
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, PINBALL_WIDTH, PINBALL_HEIGHT);
     
-    // Draw ball
+    // Draw ball with glow effect
+    ctx.shadowColor = "#FFD700";
+    ctx.shadowBlur = 15;
     ctx.beginPath();
     ctx.arc(pinballBall.x, pinballBall.y, PINBALL_BALL_RADIUS, 0, Math.PI * 2);
     ctx.fillStyle = "#FFD700";
     ctx.fill();
     ctx.strokeStyle = "#FFA500";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
     ctx.stroke();
     ctx.closePath();
+    ctx.shadowBlur = 0;
 
-    // Draw bumpers
-    PINBALL_BUMPERS.forEach(b => {
+    // Draw bumpers with glow and animation
+    PINBALL_BUMPERS.forEach((b, index) => {
+      const time = Date.now() * 0.01;
+      const pulse = Math.sin(time + index) * 0.1 + 1;
+      const radius = b.r * pulse;
+      
+      ctx.shadowColor = "#FF0000";
+      ctx.shadowBlur = 10;
       ctx.beginPath();
-      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      ctx.arc(b.x, b.y, radius, 0, Math.PI * 2);
       ctx.fillStyle = "#FF0000";
       ctx.fill();
       ctx.strokeStyle = "#FF6666";
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 4;
       ctx.stroke();
       ctx.closePath();
+      ctx.shadowBlur = 0;
     });
 
-    // Draw flippers
+    // Draw flippers with better animation
+    const flipperY = PINBALL_HEIGHT - 30;
+    const leftFlipperX = PINBALL_WIDTH / 2 - 60;
+    const rightFlipperX = PINBALL_WIDTH / 2 + 60;
+    
+    // Left flipper
+    ctx.shadowColor = "#00FFFF";
+    ctx.shadowBlur = 8;
     ctx.beginPath();
-    ctx.moveTo(PINBALL_WIDTH / 2 - 60, PINBALL_HEIGHT - 30);
-    ctx.lineTo(PINBALL_WIDTH / 2 - 60 + (leftFlipper ? 40 : 0), PINBALL_HEIGHT - 50);
+    ctx.moveTo(leftFlipperX, flipperY);
+    ctx.lineTo(leftFlipperX + (leftFlipper ? 50 : 20), flipperY - (leftFlipper ? 30 : 10));
     ctx.strokeStyle = "#00FFFF";
-    ctx.lineWidth = 8;
+    ctx.lineWidth = 12;
+    ctx.lineCap = "round";
     ctx.stroke();
     ctx.closePath();
+    ctx.shadowBlur = 0;
 
+    // Right flipper
+    ctx.shadowColor = "#00FFFF";
+    ctx.shadowBlur = 8;
     ctx.beginPath();
-    ctx.moveTo(PINBALL_WIDTH / 2 + 60, PINBALL_HEIGHT - 30);
-    ctx.lineTo(PINBALL_WIDTH / 2 + 60 - (rightFlipper ? 40 : 0), PINBALL_HEIGHT - 50);
+    ctx.moveTo(rightFlipperX, flipperY);
+    ctx.lineTo(rightFlipperX - (rightFlipper ? 50 : 20), flipperY - (rightFlipper ? 30 : 10));
     ctx.strokeStyle = "#00FFFF";
-    ctx.lineWidth = 8;
+    ctx.lineWidth = 12;
+    ctx.lineCap = "round";
     ctx.stroke();
     ctx.closePath();
+    ctx.shadowBlur = 0;
 
-    // Draw walls
+    // Draw walls with neon effect
+    ctx.shadowColor = "#4169E1";
+    ctx.shadowBlur = 5;
     ctx.strokeStyle = "#4169E1";
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 6;
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.lineTo(PINBALL_WIDTH, 0);
@@ -435,62 +464,122 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     ctx.lineTo(0, 0);
     ctx.stroke();
     ctx.closePath();
+    ctx.shadowBlur = 0;
 
-    // Score display
-    ctx.font = "20px Arial";
+    // Draw center line
+    ctx.strokeStyle = "#4169E1";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(PINBALL_WIDTH / 2, 0);
+    ctx.lineTo(PINBALL_WIDTH / 2, PINBALL_HEIGHT - 50);
+    ctx.stroke();
+    ctx.closePath();
+    ctx.setLineDash([]);
+
+    // Score display with better styling
+    ctx.font = "bold 24px Arial";
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillText("Score: " + score, 10, 30);
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 2;
+    ctx.strokeText("Score: " + score, 15, 35);
+    ctx.fillText("Score: " + score, 15, 35);
   };
 
   const pinballUpdate = () => {
     let newBall = { ...pinballBall };
 
-    // Gravity
-    newBall.vy += 0.2;
+    // Apply gravity
+    newBall.vy += 0.3;
 
+    // Update position
     newBall.x += newBall.vx;
     newBall.y += newBall.vy;
 
-    // Wall collision
-    if (newBall.x + PINBALL_BALL_RADIUS > PINBALL_WIDTH || newBall.x - PINBALL_BALL_RADIUS < 0) {
-      newBall.vx = -newBall.vx;
+    // Wall collisions with proper bouncing
+    if (newBall.x - PINBALL_BALL_RADIUS <= 0) {
+      newBall.x = PINBALL_BALL_RADIUS;
+      newBall.vx = Math.abs(newBall.vx) * 0.8;
     }
-    if (newBall.y - PINBALL_BALL_RADIUS < 0) {
-      newBall.vy = -newBall.vy;
+    if (newBall.x + PINBALL_BALL_RADIUS >= PINBALL_WIDTH) {
+      newBall.x = PINBALL_WIDTH - PINBALL_BALL_RADIUS;
+      newBall.vx = -Math.abs(newBall.vx) * 0.8;
     }
-
-    // Flipper bounce
-    if (
-      (newBall.y + PINBALL_BALL_RADIUS >= PINBALL_HEIGHT - 30 &&
-        newBall.x >= PINBALL_WIDTH / 2 - 60 &&
-        newBall.x <= PINBALL_WIDTH / 2 - 20 &&
-        leftFlipper) ||
-      (newBall.y + PINBALL_BALL_RADIUS >= PINBALL_HEIGHT - 30 &&
-        newBall.x >= PINBALL_WIDTH / 2 + 20 &&
-        newBall.x <= PINBALL_WIDTH / 2 + 60 &&
-        rightFlipper)
-    ) {
-      newBall.vy = -Math.abs(newBall.vy) - 2;
-      newBall.vx += newBall.x < PINBALL_WIDTH / 2 ? -2 : 2;
+    if (newBall.y - PINBALL_BALL_RADIUS <= 0) {
+      newBall.y = PINBALL_BALL_RADIUS;
+      newBall.vy = Math.abs(newBall.vy) * 0.8;
     }
 
-    // Bumper collision
+    // Flipper collision detection
+    const flipperY = PINBALL_HEIGHT - 30;
+    const leftFlipperX = PINBALL_WIDTH / 2 - 60;
+    const rightFlipperX = PINBALL_WIDTH / 2 + 60;
+    
+    // Left flipper
+    if (leftFlipper && 
+        newBall.y + PINBALL_BALL_RADIUS >= flipperY - 10 &&
+        newBall.y - PINBALL_BALL_RADIUS <= flipperY + 10 &&
+        newBall.x >= leftFlipperX - 20 &&
+        newBall.x <= leftFlipperX + 40) {
+      newBall.vy = -Math.abs(newBall.vy) - 3;
+      newBall.vx = -Math.abs(newBall.vx) - 2;
+      newBall.y = flipperY - PINBALL_BALL_RADIUS - 5;
+    }
+    
+    // Right flipper
+    if (rightFlipper && 
+        newBall.y + PINBALL_BALL_RADIUS >= flipperY - 10 &&
+        newBall.y - PINBALL_BALL_RADIUS <= flipperY + 10 &&
+        newBall.x >= rightFlipperX - 40 &&
+        newBall.x <= rightFlipperX + 20) {
+      newBall.vy = -Math.abs(newBall.vy) - 3;
+      newBall.vx = Math.abs(newBall.vx) + 2;
+      newBall.y = flipperY - PINBALL_BALL_RADIUS - 5;
+    }
+
+    // Bumper collisions with better physics
     PINBALL_BUMPERS.forEach(b => {
       const dx = newBall.x - b.x;
       const dy = newBall.y - b.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < PINBALL_BALL_RADIUS + b.r) {
-        const angle = Math.atan2(dy, dx);
-        newBall.vx = Math.cos(angle) * 5;
-        newBall.vy = Math.sin(angle) * 5;
+      const collisionDist = PINBALL_BALL_RADIUS + b.r;
+      
+      if (dist < collisionDist) {
+        // Calculate collision normal
+        const nx = dx / dist;
+        const ny = dy / dist;
+        
+        // Move ball out of bumper
+        const overlap = collisionDist - dist;
+        newBall.x += nx * overlap;
+        newBall.y += ny * overlap;
+        
+        // Reflect velocity
+        const dotProduct = newBall.vx * nx + newBall.vy * ny;
+        newBall.vx -= 2 * dotProduct * nx;
+        newBall.vy -= 2 * dotProduct * ny;
+        
+        // Add some energy
+        newBall.vx *= 1.2;
+        newBall.vy *= 1.2;
+        
         setScore(prev => prev + b.score);
       }
     });
 
-    // Floor collision (reset)
-    if (newBall.y - PINBALL_BALL_RADIUS > PINBALL_HEIGHT) {
-      newBall = { x: PINBALL_WIDTH / 2, y: PINBALL_HEIGHT - 30, vx: 2, vy: -5 };
+    // Ball out of bounds - reset
+    if (newBall.y > PINBALL_HEIGHT + 50) {
+      newBall = { 
+        x: PINBALL_WIDTH / 2, 
+        y: PINBALL_HEIGHT - 50, 
+        vx: (Math.random() - 0.5) * 4, 
+        vy: -8 
+      };
     }
+
+    // Apply friction
+    newBall.vx *= 0.999;
+    newBall.vy *= 0.999;
 
     setPinballBall(newBall);
 
@@ -552,7 +641,12 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
         setLevel(1);
         setPelletsCollected(0);
       } else if (gameType === 'pinball') {
-        setPinballBall({ x: PINBALL_WIDTH / 2, y: PINBALL_HEIGHT - 30, vx: 2, vy: -5 });
+        setPinballBall({ 
+          x: PINBALL_WIDTH / 2, 
+          y: PINBALL_HEIGHT - 80, 
+          vx: (Math.random() - 0.5) * 3, 
+          vy: -6 
+        });
         setLeftFlipper(false);
         setRightFlipper(false);
       }
@@ -605,6 +699,15 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
             setLeftFlipper(true);
           } else if (e.key === "ArrowRight") {
             setRightFlipper(true);
+          } else if (e.key === " ") {
+            // Space bar to launch ball
+            if (pinballBall.vx === 0 && pinballBall.vy === 0) {
+              setPinballBall(prev => ({
+                ...prev,
+                vx: (Math.random() - 0.5) * 4,
+                vy: -8
+              }));
+            }
           }
         }
       } else {
@@ -631,14 +734,14 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     setPlayTime(0);
   };
 
-  // Pinball flipper release
+  // Pinball flipper release with better timing
   useEffect(() => {
     const handleKeyUp = (e: KeyboardEvent) => {
       if (isPlaying && currentGameType === 'pinball') {
         if (e.key === "ArrowLeft") {
-          setLeftFlipper(false);
+          setTimeout(() => setLeftFlipper(false), 100);
         } else if (e.key === "ArrowRight") {
-          setRightFlipper(false);
+          setTimeout(() => setRightFlipper(false), 100);
         }
       }
     };
@@ -941,7 +1044,7 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
                           />
                           <div className="mt-4 text-center">
                             <div className="pixel-text text-sm neon-text-cyan mb-2">
-                              LEFT/RIGHT ARROWS: FLIPPERS
+                              LEFT/RIGHT ARROWS: FLIPPERS • SPACE: LAUNCH BALL
                             </div>
                             <div className="pixel-text text-xs neon-text-yellow">
                               Hit bumpers for points! Keep the ball in play!
@@ -1009,7 +1112,7 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
                       )}
                       {currentGameType === 'pinball' && (
                         <div className="pixel-text text-xs neon-text-cyan">
-                          LEFT/RIGHT ARROWS: FLIPPERS  •  HIT BUMPERS FOR POINTS  •  KEEP BALL IN PLAY
+                          LEFT/RIGHT ARROWS: FLIPPERS  •  SPACE: LAUNCH BALL  •  HIT BUMPERS FOR POINTS
                         </div>
                       )}
                       {playTime < 300 && (
