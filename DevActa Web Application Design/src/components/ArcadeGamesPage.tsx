@@ -101,6 +101,28 @@ const CAR_LANE_WIDTH = 120;
 const CAR_NUM_LANES = 4;
 const CAR_ROAD_WIDTH = CAR_LANE_WIDTH * CAR_NUM_LANES;
 
+// Pong game constants
+const PONG_WIDTH = 700;
+const PONG_HEIGHT = 500;
+const PONG_PADDLE_WIDTH = 15;
+const PONG_PADDLE_HEIGHT = 120;
+const PONG_BALL_SIZE = 18;
+const PONG_BALL_SPEED = 8; // Increased speed for faster gameplay
+const PONG_AI_SPEED = 5;
+
+// Space Shooter game constants
+const SPACE_WIDTH = 700;
+const SPACE_HEIGHT = 800;
+const SPACE_PLAYER_WIDTH = 60;
+const SPACE_PLAYER_HEIGHT = 60;
+const SPACE_PLAYER_SPEED = 8;
+const SPACE_BULLET_WIDTH = 6;
+const SPACE_BULLET_HEIGHT = 20;
+const SPACE_BULLET_SPEED = 10;
+const SPACE_ENEMY_WIDTH = 50;
+const SPACE_ENEMY_HEIGHT = 50;
+const SPACE_ENEMY_SPEED = 2;
+
 interface ArcadeGamesPageProps {
   onGameSelect?: (gameId: number, gameTitle: string) => void;
 }
@@ -109,7 +131,7 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [coins, setCoins] = useState(5);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentGameType, setCurrentGameType] = useState<'snake' | 'tetris' | 'pac-man' | 'pinball' | 'breakout' | 'flappy' | 'car-race'>('snake');
+  const [currentGameType, setCurrentGameType] = useState<'snake' | 'tetris' | 'pac-man' | 'pinball' | 'breakout' | 'flappy' | 'car-race' | 'pong' | 'space-shooter'>('snake');
   
   // Snake game state
   const [snake, setSnake] = useState([{ x: 10, y: 10 }]);
@@ -158,6 +180,29 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   const carCanvasRef = useRef<HTMLCanvasElement>(null);
   const carPlayerRef = useRef(carPlayer);
   const carObstaclesRef = useRef(carObstacles);
+  
+  // Pong game state
+  const [pongBall, setPongBall] = useState({ x: PONG_WIDTH / 2, y: PONG_HEIGHT / 2, dx: PONG_BALL_SPEED, dy: PONG_BALL_SPEED });
+  const [pongPlayerPaddleY, setPongPlayerPaddleY] = useState(PONG_HEIGHT / 2 - PONG_PADDLE_HEIGHT / 2);
+  const [pongAiPaddleY, setPongAiPaddleY] = useState(PONG_HEIGHT / 2 - PONG_PADDLE_HEIGHT / 2);
+  const [pongPlayerScore, setPongPlayerScore] = useState(0);
+  const [pongAiScore, setPongAiScore] = useState(0);
+  const pongCanvasRef = useRef<HTMLCanvasElement>(null);
+  const pongBallRef = useRef(pongBall);
+  const pongPlayerPaddleYRef = useRef(pongPlayerPaddleY);
+  const pongAiPaddleYRef = useRef(pongAiPaddleY);
+  
+  // Space Shooter game state
+  const [spacePlayer, setSpacePlayer] = useState({ x: SPACE_WIDTH / 2 - SPACE_PLAYER_WIDTH / 2, y: SPACE_HEIGHT - SPACE_PLAYER_HEIGHT - 20 });
+  const [spaceBullets, setSpaceBullets] = useState<Array<{x: number, y: number}>>([]);
+  const [spaceEnemies, setSpaceEnemies] = useState<Array<{x: number, y: number}>>([]);
+  const [spaceKeys, setSpaceKeys] = useState({ left: false, right: false, shoot: false });
+  const [spaceStars, setSpaceStars] = useState<Array<{x: number, y: number, speed: number}>>([]);
+  const spaceCanvasRef = useRef<HTMLCanvasElement>(null);
+  const spacePlayerRef = useRef(spacePlayer);
+  const spaceBulletsRef = useRef(spaceBullets);
+  const spaceEnemiesRef = useRef(spaceEnemies);
+  const spaceKeysRef = useRef(spaceKeys);
   
   // Common game state
   const [gameOver, setGameOver] = useState(false);
@@ -768,7 +813,7 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
       setGameOver(false);
       setScore(0);
       setPlayTime(0);
-      setCurrentGameType(gameType as 'snake' | 'tetris' | 'pac-man' | 'pinball' | 'breakout' | 'flappy' | 'car-race');
+      setCurrentGameType(gameType as 'snake' | 'tetris' | 'pac-man' | 'pinball' | 'breakout' | 'flappy' | 'car-race' | 'pong');
       
       // Initialize game-specific state
       if (gameType === 'snake') {
@@ -807,6 +852,12 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
         setCarPlayer({ x: startX, y: CAR_HEIGHT - CAR_PLAYER_HEIGHT - 30 });
         setCarObstacles([]);
         setCarRoadOffset(0);
+      } else if (gameType === 'pong') {
+        setPongBall({ x: PONG_WIDTH / 2, y: PONG_HEIGHT / 2, dx: PONG_BALL_SPEED, dy: PONG_BALL_SPEED });
+        setPongPlayerPaddleY(PONG_HEIGHT / 2 - PONG_PADDLE_HEIGHT / 2);
+        setPongAiPaddleY(PONG_HEIGHT / 2 - PONG_PADDLE_HEIGHT / 2);
+        setPongPlayerScore(0);
+        setPongAiScore(0);
       }
     }
   };
@@ -1487,6 +1538,194 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     return () => clearInterval(carInterval);
   }, [isPlaying, gameOver, currentGameType]);
 
+  // Update Pong refs when state changes
+  useEffect(() => {
+    pongBallRef.current = pongBall;
+  }, [pongBall]);
+
+  useEffect(() => {
+    pongPlayerPaddleYRef.current = pongPlayerPaddleY;
+  }, [pongPlayerPaddleY]);
+
+  useEffect(() => {
+    pongAiPaddleYRef.current = pongAiPaddleY;
+  }, [pongAiPaddleY]);
+
+  // Pong game logic
+  const pongDraw = (ctx: CanvasRenderingContext2D) => {
+    const ball = pongBallRef.current;
+    const playerY = pongPlayerPaddleYRef.current;
+    const aiY = pongAiPaddleYRef.current;
+    
+    ctx.clearRect(0, 0, PONG_WIDTH, PONG_HEIGHT);
+    
+    // Background
+    ctx.fillStyle = "#0a0a0a";
+    ctx.fillRect(0, 0, PONG_WIDTH, PONG_HEIGHT);
+
+    // Center line
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = 4;
+    ctx.setLineDash([15, 15]);
+    ctx.beginPath();
+    ctx.moveTo(PONG_WIDTH / 2, 0);
+    ctx.lineTo(PONG_WIDTH / 2, PONG_HEIGHT);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Player paddle (left - green)
+    ctx.shadowColor = "#00FF00";
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = "#00FF00";
+    ctx.fillRect(20, playerY, PONG_PADDLE_WIDTH, PONG_PADDLE_HEIGHT);
+    ctx.strokeStyle = "#00AA00";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(20, playerY, PONG_PADDLE_WIDTH, PONG_PADDLE_HEIGHT);
+    ctx.shadowBlur = 0;
+
+    // AI paddle (right - red)
+    ctx.shadowColor = "#FF0000";
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = "#FF0000";
+    ctx.fillRect(PONG_WIDTH - 35, aiY, PONG_PADDLE_WIDTH, PONG_PADDLE_HEIGHT);
+    ctx.strokeStyle = "#AA0000";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(PONG_WIDTH - 35, aiY, PONG_PADDLE_WIDTH, PONG_PADDLE_HEIGHT);
+    ctx.shadowBlur = 0;
+
+    // Ball
+    ctx.shadowColor = "#FFD700";
+    ctx.shadowBlur = 25;
+    ctx.fillStyle = "#FFD700";
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, PONG_BALL_SIZE, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#FFA500";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Scores
+    ctx.font = "bold 48px Arial";
+    ctx.fillStyle = "#00FF00";
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 3;
+    ctx.strokeText(pongPlayerScore.toString(), PONG_WIDTH / 2 - 80, 60);
+    ctx.fillText(pongPlayerScore.toString(), PONG_WIDTH / 2 - 80, 60);
+    
+    ctx.fillStyle = "#FF0000";
+    ctx.strokeText(pongAiScore.toString(), PONG_WIDTH / 2 + 50, 60);
+    ctx.fillText(pongAiScore.toString(), PONG_WIDTH / 2 + 50, 60);
+  };
+
+  const pongUpdate = () => {
+    if (gameOver) return;
+
+    let newBall = { ...pongBallRef.current };
+    newBall.x += newBall.dx;
+    newBall.y += newBall.dy;
+
+    // Top & bottom collision
+    if (newBall.y - PONG_BALL_SIZE < 0 || newBall.y + PONG_BALL_SIZE > PONG_HEIGHT) {
+      newBall.dy = -newBall.dy;
+    }
+
+    const playerY = pongPlayerPaddleYRef.current;
+    const aiY = pongAiPaddleYRef.current;
+
+    // Player paddle collision
+    if (
+      newBall.x - PONG_BALL_SIZE < 35 &&
+      newBall.y > playerY &&
+      newBall.y < playerY + PONG_PADDLE_HEIGHT
+    ) {
+      newBall.dx = Math.abs(newBall.dx);
+      // Add spin based on where ball hits paddle
+      const hitPos = (newBall.y - playerY) / PONG_PADDLE_HEIGHT;
+      newBall.dy = (hitPos - 0.5) * 10;
+    }
+
+    // AI paddle collision
+    if (
+      newBall.x + PONG_BALL_SIZE > PONG_WIDTH - 35 &&
+      newBall.y > aiY &&
+      newBall.y < aiY + PONG_PADDLE_HEIGHT
+    ) {
+      newBall.dx = -Math.abs(newBall.dx);
+      // Add spin based on where ball hits paddle
+      const hitPos = (newBall.y - aiY) / PONG_PADDLE_HEIGHT;
+      newBall.dy = (hitPos - 0.5) * 10;
+    }
+
+    // Score - player misses (AI gets point)
+    if (newBall.x - PONG_BALL_SIZE < 0) {
+      setPongAiScore((prev) => prev + 1);
+      // Ball serves toward player after AI scores
+      newBall = { 
+        x: PONG_WIDTH / 2, 
+        y: PONG_HEIGHT / 2, 
+        dx: -PONG_BALL_SPEED, 
+        dy: (Math.random() - 0.5) * 6 
+      };
+    }
+
+    // Score - AI misses (player gets point)
+    if (newBall.x + PONG_BALL_SIZE > PONG_WIDTH) {
+      setPongPlayerScore((prev) => prev + 1);
+      setScore(prev => prev + 10);
+      // Ball serves toward AI after player scores
+      newBall = { 
+        x: PONG_WIDTH / 2, 
+        y: PONG_HEIGHT / 2, 
+        dx: PONG_BALL_SPEED, 
+        dy: (Math.random() - 0.5) * 6 
+      };
+    }
+
+    // AI movement
+    let newAiY = aiY;
+    if (newBall.y > aiY + PONG_PADDLE_HEIGHT / 2) newAiY += PONG_AI_SPEED;
+    if (newBall.y < aiY + PONG_PADDLE_HEIGHT / 2) newAiY -= PONG_AI_SPEED;
+    if (newAiY < 0) newAiY = 0;
+    if (newAiY + PONG_PADDLE_HEIGHT > PONG_HEIGHT) newAiY = PONG_HEIGHT - PONG_PADDLE_HEIGHT;
+
+    setPongAiPaddleY(newAiY);
+    setPongBall(newBall);
+
+    if (pongCanvasRef.current) {
+      const ctx = pongCanvasRef.current.getContext("2d");
+      if (ctx) pongDraw(ctx);
+    }
+  };
+
+  // Pong game loop
+  useEffect(() => {
+    if (!isPlaying || gameOver || currentGameType !== 'pong') return;
+
+    // Initialize canvas
+    if (pongCanvasRef.current) {
+      const ctx = pongCanvasRef.current.getContext("2d");
+      if (ctx) pongDraw(ctx);
+    }
+
+    const pongInterval = setInterval(() => {
+      pongUpdate();
+    }, 16);
+
+    return () => clearInterval(pongInterval);
+  }, [isPlaying, gameOver, currentGameType]);
+
+  // Pong mouse controls
+  const handlePongMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (isPlaying && currentGameType === 'pong' && !gameOver && pongCanvasRef.current) {
+      const rect = pongCanvasRef.current.getBoundingClientRect();
+      let y = e.clientY - rect.top - PONG_PADDLE_HEIGHT / 2;
+      if (y < 0) y = 0;
+      if (y + PONG_PADDLE_HEIGHT > PONG_HEIGHT) y = PONG_HEIGHT - PONG_PADDLE_HEIGHT;
+      setPongPlayerPaddleY(y);
+    }
+  };
+
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -1870,6 +2109,35 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
                           </div>
                         </div>
                       )}
+
+                      {/* Pong Game */}
+                      {currentGameType === 'pong' && (
+                        <div className="flex flex-col items-center justify-center w-full h-full">
+                          <canvas 
+                            ref={pongCanvasRef} 
+                            width={PONG_WIDTH} 
+                            height={PONG_HEIGHT} 
+                            onMouseMove={handlePongMouseMove}
+                            style={{ 
+                              backgroundColor: "#0a0a0a", 
+                              border: "4px solid #4169E1",
+                              borderRadius: "12px",
+                              boxShadow: "0 0 30px #4169E1",
+                              maxWidth: "90vw",
+                              maxHeight: "90vh",
+                              cursor: "none"
+                            }} 
+                          />
+                          <div className="mt-6 text-center">
+                            <div className="pixel-text text-lg neon-text-cyan mb-3">
+                              🏓 MOUSE: MOVE PADDLE • BEAT THE AI!
+                            </div>
+                            <div className="pixel-text text-sm neon-text-yellow">
+                              First to score wins! Game ends in 1 minute!
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Game Over Overlay */}
                       {gameOver && (
@@ -1946,6 +2214,11 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
                       {currentGameType === 'car-race' && (
                         <div className="pixel-text text-sm neon-text-cyan">
                           🏎️ LEFT/RIGHT ARROWS: STEER  •  DODGE TRAFFIC  •  DON'T CRASH
+                        </div>
+                      )}
+                      {currentGameType === 'pong' && (
+                        <div className="pixel-text text-sm neon-text-cyan">
+                          🏓 MOUSE: MOVE PADDLE  •  BEAT THE AI  •  SCORE POINTS
                         </div>
                       )}
                       {playTime < 60 && (
