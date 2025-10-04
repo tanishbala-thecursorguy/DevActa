@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { mockGames } from "../data/mockData";
 import { ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 
@@ -33,6 +33,18 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   const [tetrisPiece, setTetrisPiece] = useState<{shape: number[][], x: number, y: number}>({
     shape: [[1,1,1,1]], x: 3, y: 0
   });
+  
+  // Refs to track latest state in intervals
+  const tetrisGridRef = useRef(tetrisGrid);
+  const tetrisPieceRef = useRef(tetrisPiece);
+  
+  useEffect(() => {
+    tetrisGridRef.current = tetrisGrid;
+  }, [tetrisGrid]);
+  
+  useEffect(() => {
+    tetrisPieceRef.current = tetrisPiece;
+  }, [tetrisPiece]);
   
   // Common game state
   const [gameOver, setGameOver] = useState(false);
@@ -109,68 +121,67 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   useEffect(() => {
     if (!isPlaying || gameOver || currentGameType !== 'tetris') return;
 
-    const spawnPiece = () => {
-      const newShape = TETRIS_PIECES[Math.floor(Math.random() * TETRIS_PIECES.length)];
-      setTetrisPiece({ shape: newShape, x: 3, y: 0 });
-    };
-
-    const checkCollision = (x: number, y: number, shape: number[][]) => {
+    const checkCollision = (x: number, y: number, shape: number[][], grid: number[][]) => {
       return shape.some((row, i) =>
         row.some((val, j) => {
           if (!val) return false;
           const xx = x + j, yy = y + i;
-          return xx < 0 || xx >= 10 || yy >= 20 || (yy >= 0 && tetrisGrid[yy][xx]);
+          return xx < 0 || xx >= 10 || yy >= 20 || (yy >= 0 && grid[yy] && grid[yy][xx]);
         })
       );
     };
 
     const gameInterval = setInterval(() => {
-      setTetrisPiece(prev => {
-        const newY = prev.y + 1;
-        if (!checkCollision(prev.x, newY, prev.shape)) {
-          return { ...prev, y: newY };
-        } else {
-          // Merge piece into grid
-          const newGrid = tetrisGrid.map(row => [...row]);
-          prev.shape.forEach((row, i) => {
-            row.forEach((val, j) => {
-              if (val && prev.y + i >= 0) {
-                newGrid[prev.y + i][prev.x + j] = 1;
-              }
-            });
-          });
-
-          // Clear lines
-          let linesCleared = 0;
-          for (let r = 19; r >= 0; r--) {
-            if (newGrid[r].every(Boolean)) {
-              newGrid.splice(r, 1);
-              newGrid.unshift(Array(10).fill(0));
-              linesCleared++;
-              r++;
+      const currentPiece = tetrisPieceRef.current;
+      const currentGrid = tetrisGridRef.current;
+      const newY = currentPiece.y + 1;
+      
+      if (!checkCollision(currentPiece.x, newY, currentPiece.shape, currentGrid)) {
+        // Move piece down
+        setTetrisPiece({ ...currentPiece, y: newY });
+      } else {
+        // Merge piece into grid
+        const newGrid = currentGrid.map(row => [...row]);
+        currentPiece.shape.forEach((row, i) => {
+          row.forEach((val, j) => {
+            if (val && currentPiece.y + i >= 0 && currentPiece.y + i < 20 && currentPiece.x + j >= 0 && currentPiece.x + j < 10) {
+              newGrid[currentPiece.y + i][currentPiece.x + j] = 1;
             }
-          }
-          
-          if (linesCleared > 0) {
-            setScore(s => s + linesCleared * 100);
-          }
+          });
+        });
 
-          setTetrisGrid(newGrid);
-
-          // Check game over
-          if (checkCollision(3, 0, prev.shape)) {
-            setGameOver(true);
-            return prev;
+        // Clear lines
+        let linesCleared = 0;
+        for (let r = 19; r >= 0; r--) {
+          if (newGrid[r].every(Boolean)) {
+            newGrid.splice(r, 1);
+            newGrid.unshift(Array(10).fill(0));
+            linesCleared++;
+            r++;
           }
-
-          spawnPiece();
-          return prev;
         }
-      });
+        
+        if (linesCleared > 0) {
+          setScore(s => s + linesCleared * 100);
+        }
+
+        setTetrisGrid(newGrid);
+
+        // Spawn new piece
+        const newShape = TETRIS_PIECES[Math.floor(Math.random() * TETRIS_PIECES.length)];
+        
+        // Check game over
+        if (checkCollision(3, 0, newShape, newGrid)) {
+          setGameOver(true);
+          return;
+        }
+        
+        setTetrisPiece({ shape: newShape, x: 3, y: 0 });
+      }
     }, 500);
 
     return () => clearInterval(gameInterval);
-  }, [isPlaying, gameOver, currentGameType, tetrisGrid, tetrisPiece]);
+  }, [isPlaying, gameOver, currentGameType]);
 
   const navigateLeft = () => {
     setCurrentIndex((prev) => (prev === 0 ? mockGames.length - 1 : prev - 1));
@@ -211,11 +222,12 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   };
 
   const checkTetrisCollision = (x: number, y: number, shape: number[][]) => {
+    const grid = tetrisGridRef.current;
     return shape.some((row, i) =>
       row.some((val, j) => {
         if (!val) return false;
         const xx = x + j, yy = y + i;
-        return xx < 0 || xx >= 10 || yy >= 20 || (yy >= 0 && tetrisGrid[yy][xx]);
+        return xx < 0 || xx >= 10 || yy >= 20 || (yy >= 0 && grid[yy] && grid[yy][xx]);
       })
     );
   };
