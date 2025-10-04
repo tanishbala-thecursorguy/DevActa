@@ -26,17 +26,28 @@ const PACMAN_PELLET = 2;
 const PACMAN_PLAYER = 3;
 const PACMAN_GHOST = 4;
 
+const PACMAN_ROWS = 12;
+const PACMAN_COLS = 12;
+
 const INITIAL_PACMAN_MAP = [
-  [1,1,1,1,1,1,1,1,1,1],
-  [1,2,2,2,1,2,2,2,2,1],
-  [1,2,1,2,1,2,1,1,2,1],
-  [1,2,1,2,2,2,1,2,2,1],
-  [1,2,1,1,1,1,1,2,1,1],
-  [1,2,2,2,2,2,2,2,2,1],
-  [1,2,1,1,1,1,1,1,2,1],
-  [1,2,2,2,2,2,2,2,2,1],
-  [1,4,1,1,1,1,1,1,2,1],
-  [1,1,1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,2,2,2,2,1,2,2,2,2,2,1],
+  [1,2,1,1,2,1,2,1,1,1,2,1],
+  [1,2,2,2,2,2,2,2,2,1,2,1],
+  [1,2,1,1,1,1,1,1,2,1,2,1],
+  [1,2,2,2,2,2,2,2,2,1,2,1],
+  [1,1,1,1,1,1,1,1,2,1,2,1],
+  [1,2,2,2,2,2,2,2,2,2,2,1],
+  [1,2,1,1,1,1,1,1,1,1,2,1],
+  [1,2,2,2,2,2,2,2,2,2,2,1],
+  [1,4,1,1,1,1,1,1,1,1,4,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1],
+];
+
+const INITIAL_PACMAN_POS = { x: 1, y: 1 };
+const INITIAL_GHOSTS = [
+  { x: 1, y: 10 },
+  { x: 10, y: 10 },
 ];
 
 interface ArcadeGamesPageProps {
@@ -62,8 +73,8 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   
   // Pac-Man game state
   const [pacmanMap, setPacmanMap] = useState(INITIAL_PACMAN_MAP.map(row => [...row]));
-  const [pacmanPos, setPacmanPos] = useState({ x: 1, y: 1 });
-  const [ghostPos, setGhostPos] = useState({ x: 1, y: 8 });
+  const [pacmanPos, setPacmanPos] = useState(INITIAL_PACMAN_POS);
+  const [ghosts, setGhosts] = useState(INITIAL_GHOSTS);
   
   // Common game state
   const [gameOver, setGameOver] = useState(false);
@@ -222,54 +233,56 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     const ny = pacmanPos.y + dy;
     
     if (pacmanMap[ny][nx] !== PACMAN_WALL) {
-      if (pacmanMap[ny][nx] === PACMAN_PELLET) {
-        setScore(prev => prev + 10);
-      }
-      
-      if (nx === ghostPos.x && ny === ghostPos.y) {
-        setGameOver(true);
-        return;
-      }
-
+      const newScore = pacmanMap[ny][nx] === PACMAN_PELLET ? score + 10 : score;
       const newMap = pacmanMap.map(row => [...row]);
       newMap[pacmanPos.y][pacmanPos.x] = PACMAN_EMPTY;
       newMap[ny][nx] = PACMAN_PLAYER;
       setPacmanMap(newMap);
       setPacmanPos({ x: nx, y: ny });
+      setScore(newScore);
+
+      // Check collisions with ghosts
+      ghosts.forEach(g => {
+        if (g.x === nx && g.y === ny) setGameOver(true);
+      });
     }
   };
 
-  const pacmanMoveGhost = () => {
+  const pacmanMoveGhosts = () => {
     if (gameOver) return;
     
-    const directions = [
-      { dx: 0, dy: -1 },
-      { dx: 0, dy: 1 },
-      { dx: -1, dy: 0 },
-      { dx: 1, dy: 0 },
-    ];
-    
-    const valid = directions.filter(({ dx, dy }) => {
-      const nx = ghostPos.x + dx;
-      const ny = ghostPos.y + dy;
-      return pacmanMap[ny][nx] !== PACMAN_WALL;
+    const newGhosts = ghosts.map(g => {
+      const directions = [
+        { dx: 0, dy: -1 },
+        { dx: 0, dy: 1 },
+        { dx: -1, dy: 0 },
+        { dx: 1, dy: 0 },
+      ];
+      
+      const valid = directions.filter(({ dx, dy }) => {
+        const nx = g.x + dx;
+        const ny = g.y + dy;
+        return pacmanMap[ny][nx] !== PACMAN_WALL;
+      });
+      
+      if (valid.length === 0) return g;
+      
+      const move = valid[Math.floor(Math.random() * valid.length)];
+      return { x: g.x + move.dx, y: g.y + move.dy };
     });
-    
-    if (valid.length === 0) return;
-    
-    const move = valid[Math.floor(Math.random() * valid.length)];
-    const nx = ghostPos.x + move.dx;
-    const ny = ghostPos.y + move.dy;
-    
-    if (nx === pacmanPos.x && ny === pacmanPos.y) {
-      setGameOver(true);
-      return;
-    }
 
-    const newMap = pacmanMap.map(row => row.map(cell => cell === PACMAN_GHOST ? PACMAN_EMPTY : cell));
-    newMap[ny][nx] = PACMAN_GHOST;
+    // Check collisions with Pac-Man
+    newGhosts.forEach(g => {
+      if (g.x === pacmanPos.x && g.y === pacmanPos.y) setGameOver(true);
+    });
+
+    // Update map for ghosts
+    const newMap = pacmanMap.map(row => row.map(cell => (cell === PACMAN_GHOST ? PACMAN_EMPTY : cell)));
+    newGhosts.forEach(g => newMap[g.y][g.x] = PACMAN_GHOST);
+    newMap[pacmanPos.y][pacmanPos.x] = PACMAN_PLAYER;
+
+    setGhosts(newGhosts);
     setPacmanMap(newMap);
-    setGhostPos({ x: nx, y: ny });
   };
 
   // Pac-Man game logic - ghost AI
@@ -277,11 +290,11 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     if (!isPlaying || gameOver || currentGameType !== 'pac-man') return;
 
     const ghostInterval = setInterval(() => {
-      pacmanMoveGhost();
+      pacmanMoveGhosts();
     }, 500);
 
     return () => clearInterval(ghostInterval);
-  }, [isPlaying, gameOver, currentGameType, pacmanPos, ghostPos, pacmanMap]);
+  }, [isPlaying, gameOver, currentGameType, pacmanPos, ghosts, pacmanMap]);
 
   const navigateLeft = () => {
     setCurrentIndex((prev) => (prev === 0 ? mockGames.length - 1 : prev - 1));
@@ -313,8 +326,8 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
         setTetrisPiece({ ...randomTetromino(), pos: { x: 3, y: 0 } });
       } else if (gameType === 'pac-man') {
         setPacmanMap(INITIAL_PACMAN_MAP.map(row => [...row]));
-        setPacmanPos({ x: 1, y: 1 });
-        setGhostPos({ x: 1, y: 8 });
+        setPacmanPos(INITIAL_PACMAN_POS);
+        setGhosts(INITIAL_GHOSTS);
       }
     }
   };
@@ -375,7 +388,7 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [currentIndex, isPlaying, direction, coins, currentGameType, tetrisPiece, tetrisGrid, pacmanPos, ghostPos, pacmanMap]);
+  }, [currentIndex, isPlaying, direction, coins, currentGameType, tetrisPiece, tetrisGrid, pacmanPos, ghosts, pacmanMap]);
 
   const handleBackToMenu = () => {
     setIsPlaying(false);
@@ -582,32 +595,54 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
 
                       {/* Pac-Man Game */}
                       {currentGameType === 'pac-man' && (
-                        <div className="grid gap-0.5" style={{ 
-                          gridTemplateColumns: 'repeat(10, 1fr)',
-                          gridTemplateRows: 'repeat(10, 1fr)',
-                          maxWidth: '400px',
+                        <div className="grid gap-1" style={{ 
+                          gridTemplateColumns: `repeat(${PACMAN_COLS}, 25px)`,
+                          gridTemplateRows: `repeat(${PACMAN_ROWS}, 25px)`,
+                          maxWidth: '350px',
                           margin: '0 auto'
                         }}>
                           {pacmanMap.flat().map((cell, idx) => {
-                            let cellColor = 'bg-gray-800/20';
+                            let cellStyle: React.CSSProperties = {
+                              width: '25px',
+                              height: '25px',
+                              backgroundColor: '#222',
+                              borderRadius: '0%',
+                              border: '1px solid #333',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            };
                             
                             if (cell === PACMAN_WALL) {
-                              cellColor = 'bg-blue-900 border border-blue-400';
+                              cellStyle.backgroundColor = '#000080';
+                              cellStyle.border = '1px solid #4169E1';
                             } else if (cell === PACMAN_PELLET) {
-                              cellColor = 'bg-gray-800/20';
+                              cellStyle.backgroundColor = '#222';
                             } else if (cell === PACMAN_PLAYER) {
-                              cellColor = 'bg-yellow-400 shadow-lg shadow-yellow-400/50 rounded-full';
+                              cellStyle.backgroundColor = '#FFD700';
+                              cellStyle.borderRadius = '50%';
+                              cellStyle.boxShadow = '0 0 10px #FFD700';
                             } else if (cell === PACMAN_GHOST) {
-                              cellColor = 'bg-red-500 shadow-lg shadow-red-500/50';
+                              cellStyle.backgroundColor = '#FF0000';
+                              cellStyle.borderRadius = '50%';
+                              cellStyle.boxShadow = '0 0 10px #FF0000';
                             }
                             
                             return (
                               <div
                                 key={idx}
-                                className={`aspect-square rounded-sm flex items-center justify-center ${cellColor}`}
+                                style={cellStyle}
                               >
                                 {cell === PACMAN_PELLET && (
-                                  <div className="w-2 h-2 bg-yellow-300 rounded-full shadow-sm shadow-yellow-300/50" />
+                                  <div 
+                                    style={{
+                                      width: '6px',
+                                      height: '6px',
+                                      backgroundColor: '#FFD700',
+                                      borderRadius: '50%',
+                                      boxShadow: '0 0 4px #FFD700'
+                                    }}
+                                  />
                                 )}
                               </div>
                             );
