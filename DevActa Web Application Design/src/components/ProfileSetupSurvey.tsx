@@ -18,25 +18,22 @@ interface UserProfile {
 
 interface ProfileSetupSurveyProps {
   onComplete: (profileData: UserProfile) => void;
-  authUser?: any;
 }
 
-export function ProfileSetupSurvey({ onComplete, authUser }: ProfileSetupSurveyProps) {
+export function ProfileSetupSurvey({ onComplete }: ProfileSetupSurveyProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
-    username: authUser?.user_metadata?.user_name || authUser?.user_metadata?.preferred_username || "",
-    firstName: authUser?.user_metadata?.full_name?.split(' ')[0] || "",
-    lastName: authUser?.user_metadata?.full_name?.split(' ').slice(1).join(' ') || "",
-    bio: authUser?.user_metadata?.bio || "",
+    username: "",
+    firstName: "",
+    lastName: "",
+    bio: "",
     profilePicture: null as File | null,
-    githubLink: authUser?.user_metadata?.html_url || `https://github.com/${authUser?.user_metadata?.user_name || ''}`,
+    githubLink: "",
     linkedinLink: "",
     otherSocials: [""],
   });
   const [showSuccess, setShowSuccess] = useState(false);
-  const [profilePictureURL, setProfilePictureURL] = useState<string | null>(
-    authUser?.user_metadata?.avatar_url || null
-  );
+  const [profilePictureURL, setProfilePictureURL] = useState<string | null>(null);
 
   const totalSteps = 5;
 
