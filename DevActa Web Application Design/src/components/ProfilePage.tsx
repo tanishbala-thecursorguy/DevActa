@@ -6,9 +6,32 @@ import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Github, Linkedin, Trophy, Star, GitFork, ExternalLink, Settings, Edit, Calendar, MapPin, Zap, Target, Award } from 'lucide-react';
+import { useUser } from '../contexts/UserContext';
 
 export function ProfilePage() {
-  const userProfile = {
+  const { userProfile: contextProfile } = useUser();
+  
+  // Use context profile if available, otherwise use mock data
+  const userProfile = contextProfile ? {
+    name: `${contextProfile.firstName} ${contextProfile.lastName}`,
+    username: `@${contextProfile.username || 'user'}`,
+    title: 'Developer',
+    company: '',
+    location: '',
+    level: 1,
+    xp: 0,
+    xpToNext: 1000,
+    totalScore: contextProfile.trophies || 0,
+    globalRank: 0,
+    avatar: contextProfile.profilePicture || 'https://images.unsplash.com/photo-1681887001651-a15c749c1ab0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmZW1hbGUlMjBkZXZlbG9wZXIlMjBwcm9maWxlJTIwcG9ydHJhaXR8ZW58MXx8fHwxNzU5NTc1MzQ5fDA&ixlib=rb-4.1.0&q=80&w=1080',
+    bio: contextProfile.bio || 'No bio yet',
+    joinDate: 'Recently',
+    streak: 0,
+    badges: ['🏆'],
+    githubLink: contextProfile.githubLink,
+    linkedinLink: contextProfile.linkedinLink,
+    otherSocials: contextProfile.otherSocials || []
+  } : {
     name: 'Sarah Chen',
     username: '@sarahdev',
     title: 'Full Stack Wizard',
@@ -23,7 +46,10 @@ export function ProfilePage() {
     bio: 'Passionate full-stack developer with 8+ years of experience building scalable web applications. Love working with React, Node.js, and cloud technologies. Gaming enthusiast and competitive programmer.',
     joinDate: 'March 2022',
     streak: 47,
-    badges: ['🏆', '⚡', '🧠', '🎯', '🚀', '💎']
+    badges: ['🏆', '⚡', '🧠', '🎯', '🚀', '💎'],
+    githubLink: '',
+    linkedinLink: '',
+    otherSocials: []
   };
 
   const repositories = [
@@ -134,18 +160,39 @@ export function ProfilePage() {
 
             {/* Social Links */}
             <div className="flex items-center space-x-4 mb-6">
-              <Button variant="outline" size="sm" className="border-border rounded-lg">
-                <Github className="w-4 h-4 mr-2" />
-                GitHub
-              </Button>
-              <Button variant="outline" size="sm" className="border-border rounded-lg">
-                <Linkedin className="w-4 h-4 mr-2" />
-                LinkedIn
-              </Button>
-              <Button variant="outline" size="sm" className="border-border rounded-lg">
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Portfolio
-              </Button>
+              {userProfile.githubLink && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="border-border rounded-lg"
+                  onClick={() => window.open(userProfile.githubLink, '_blank')}
+                >
+                  <Github className="w-4 h-4 mr-2" />
+                  GitHub
+                </Button>
+              )}
+              {userProfile.linkedinLink && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="border-border rounded-lg"
+                  onClick={() => window.open(userProfile.linkedinLink, '_blank')}
+                >
+                  <Linkedin className="w-4 h-4 mr-2" />
+                  LinkedIn
+                </Button>
+              )}
+              {userProfile.otherSocials && userProfile.otherSocials.length > 0 && userProfile.otherSocials[0] && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="border-border rounded-lg"
+                  onClick={() => window.open(userProfile.otherSocials[0], '_blank')}
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Portfolio
+                </Button>
+              )}
             </div>
 
             {/* Badges */}
