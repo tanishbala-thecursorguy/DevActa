@@ -113,7 +113,7 @@ function AppContent() {
     // Save to Supabase if user is authenticated
     if (authUser) {
       try {
-        const { supabaseAuth } = await import("../lib/supabase");
+        const { supabaseAuth } = await import("./lib/supabase");
         await supabaseAuth.from('profiles').update({
           first_name: profileData.firstName,
           last_name: profileData.lastName,
