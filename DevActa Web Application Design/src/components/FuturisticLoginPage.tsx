@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
-import logoImage from "figma:asset/32a9f97ebfa773dabe97368d7e406f5ed1e26205.png";
+import logoImage from "../assets/32a9f97ebfa773dabe97368d7e406f5ed1e26205.png";
 import { signInWithGitHub, signInWithLinkedIn } from "../services/authService";
 
 interface FuturisticLoginPageProps {

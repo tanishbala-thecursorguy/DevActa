@@ -1,6 +1,6 @@
 import React, { ReactNode, useEffect, useRef } from "react";
 import { cn } from "../lib/utils";
-import logoImage from "figma:asset/32a9f97ebfa773dabe97368d7e406f5ed1e26205.png";
+import logoImage from "../assets/32a9f97ebfa773dabe97368d7e406f5ed1e26205.png";
 
 interface FuturisticLandingPageProps {
   onGetStarted: () => void;
