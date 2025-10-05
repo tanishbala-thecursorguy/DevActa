@@ -46,25 +46,20 @@ function VerticalMarquee({
         } as React.CSSProperties
       }
     >
-      <div
-        className={cn(
-          "flex shrink-0 flex-col animate-marquee-vertical",
-          reverse && "[animation-direction:reverse]",
-          pauseOnHover && "group-hover:[animation-play-state:paused]"
-        )}
-      >
-        {children}
-      </div>
-      <div
-        className={cn(
-          "flex shrink-0 flex-col animate-marquee-vertical",
-          reverse && "[animation-direction:reverse]",
-          pauseOnHover && "group-hover:[animation-play-state:paused]"
-        )}
-        aria-hidden="true"
-      >
-        {children}
-      </div>
+      {/* Duplicate content multiple times for seamless infinite scroll */}
+      {[...Array(4)].map((_, i) => (
+        <div
+          key={i}
+          className={cn(
+            "flex shrink-0 flex-col animate-marquee-vertical",
+            reverse && "[animation-direction:reverse]",
+            pauseOnHover && "group-hover:[animation-play-state:paused]"
+          )}
+          aria-hidden={i > 0}
+        >
+          {children}
+        </div>
+      ))}
     </div>
   );
 }
@@ -83,6 +78,14 @@ const marqueeItems = [
 
 export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPageProps) {
   const marqueeRef = useRef<HTMLDivElement>(null);
+
+  // Lock scroll when landing page is mounted
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
 
   useEffect(() => {
     const marqueeContainer = marqueeRef.current;
@@ -137,7 +140,7 @@ export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPagePro
             <div className="flex flex-wrap gap-4 animate-fade-in-up [animation-delay:600ms]">
               <button 
                 onClick={onGetStarted}
-                className="group relative px-8 py-4 bg-foreground text-background rounded-md font-medium overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                className="group relative px-8 py-4 bg-black text-white rounded-md font-medium overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl"
               >
                 <span className="relative z-10">Get Started</span>
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
@@ -155,7 +158,7 @@ export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPagePro
                 {marqueeItems.map((item, idx) => (
                   <div
                     key={idx}
-                    className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-light tracking-tight py-8 marquee-item"
+                    className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-light tracking-tight py-4 marquee-item"
                   >
                     {item}
                   </div>
