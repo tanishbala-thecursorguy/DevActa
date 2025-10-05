@@ -51,8 +51,11 @@ export function FuturisticLoginPage({ onLogin, onSignUp }: FuturisticLoginPagePr
             <h1 className="professional-title text-6xl mb-4">
               Dev<span style={{ color: '#0A66C2' }}>Acta</span>
             </h1>
-            <p className="professional-subtitle text-xl text-gray-600 max-w-md mx-auto leading-relaxed">
+            <p className="professional-subtitle text-xl text-gray-600 max-w-md mx-auto leading-relaxed mb-3">
               Where developers connect, compete, and get hired
+            </p>
+            <p className="text-sm text-gray-500 italic">
+              Built for developers by developers
             </p>
           </div>
         </div>
@@ -68,9 +71,12 @@ export function FuturisticLoginPage({ onLogin, onSignUp }: FuturisticLoginPagePr
                 alt="DevArena" 
                 className="w-20 h-20 mx-auto object-contain mb-4"
               />
-              <h1 className="professional-title text-3xl">
+              <h1 className="professional-title text-3xl mb-2">
                 Dev<span style={{ color: '#0A66C2' }}>Acta</span>
               </h1>
+              <p className="text-xs text-gray-500 italic">
+                Built for developers by developers
+              </p>
             </div>
 
             {/* Login Box */}
