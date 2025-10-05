@@ -2440,6 +2440,475 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isPlaying, currentGameType]);
 
+  // Minesweeper game logic
+  const createMineBoard = () => {
+    let board: {revealed: boolean, mine: boolean, neighbor: number, flagged: boolean}[][] = Array(MINE_ROWS)
+      .fill(null)
+      .map(() =>
+        Array(MINE_COLS).fill(null).map(() => ({
+          revealed: false,
+          mine: false,
+          neighbor: 0,
+          flagged: false,
+        }))
+      );
+
+    // Place mines
+    let placed = 0;
+    while (placed < MINE_COUNT) {
+      const r = Math.floor(Math.random() * MINE_ROWS);
+      const c = Math.floor(Math.random() * MINE_COLS);
+      if (!board[r][c].mine) {
+        board[r][c].mine = true;
+        placed++;
+      }
+    }
+
+    // Count neighbors
+    const dirs = [
+      [-1, -1], [-1, 0], [-1, 1],
+      [0, -1], [0, 1],
+      [1, -1], [1, 0], [1, 1],
+    ];
+
+    for (let r = 0; r < MINE_ROWS; r++) {
+      for (let c = 0; c < MINE_COLS; c++) {
+        if (!board[r][c].mine) {
+          let count = 0;
+          dirs.forEach(([dr, dc]) => {
+            const nr = r + dr, nc = c + dc;
+            if (nr >= 0 && nr < MINE_ROWS && nc >= 0 && nc < MINE_COLS && board[nr][nc].mine) {
+              count++;
+            }
+          });
+          board[r][c].neighbor = count;
+        }
+      }
+    }
+
+    return board;
+  };
+
+  const revealMineCell = (r: number, c: number, board: {revealed: boolean, mine: boolean, neighbor: number, flagged: boolean}[][]) => {
+    if (board[r][c].revealed || board[r][c].flagged) return;
+    board[r][c].revealed = true;
+
+    if (board[r][c].mine) {
+      setMineGameOver(true);
+      setGameOver(true);
+      return;
+    }
+
+    if (board[r][c].neighbor === 0) {
+      const dirs = [
+        [-1, -1], [-1, 0], [-1, 1],
+        [0, -1], [0, 1],
+        [1, -1], [1, 0], [1, 1],
+      ];
+      dirs.forEach(([dr, dc]) => {
+        const nr = r + dr, nc = c + dc;
+        if (nr >= 0 && nr < MINE_ROWS && nc >= 0 && nc < MINE_COLS) {
+          revealMineCell(nr, nc, board);
+        }
+      });
+    }
+  };
+
+  const handleMineClick = (r: number, c: number) => {
+    if (mineGameOver || mineWin) return;
+    const newBoard = mineBoard.map((row) => row.map((cell) => ({ ...cell })));
+    revealMineCell(r, c, newBoard);
+    setMineBoard(newBoard);
+
+    // Check win
+    let hidden = 0;
+    newBoard.forEach(row =>
+      row.forEach(cell => {
+        if (!cell.revealed && !cell.mine) hidden++;
+      })
+    );
+    if (hidden === 0) {
+      setMineWin(true);
+      setGameOver(true);
+    }
+  };
+
+  const handleMineRightClick = (e: React.MouseEvent, r: number, c: number) => {
+    e.preventDefault();
+    if (mineGameOver || mineWin) return;
+    const newBoard = mineBoard.map((row) => row.map((cell) => ({ ...cell })));
+    newBoard[r][c].flagged = !newBoard[r][c].flagged;
+    setMineBoard(newBoard);
+  };
+
+  useEffect(() => {
+    if (!isPlaying || currentGameType !== 'minesweeper') return;
+    
+    if (mineBoard.length === 0) {
+      setMineBoard(createMineBoard());
+    }
+  }, [isPlaying, currentGameType, mineBoard.length]);
+
+  // 2048 game logic
+  const getEmpty2048Grid = () =>
+    Array(GAME_2048_GRID_SIZE)
+      .fill(null)
+      .map(() => Array(GAME_2048_GRID_SIZE).fill(0));
+
+  const addRandom2048Tile = (grid: number[][]) => {
+    const newGrid = grid.map((row) => [...row]);
+    const emptyCells: {r: number, c: number}[] = [];
+    newGrid.forEach((row, r) =>
+      row.forEach((cell, c) => {
+        if (cell === 0) emptyCells.push({ r, c });
+      })
+    );
+    if (emptyCells.length === 0) return newGrid;
+    const { r, c } = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+    newGrid[r][c] = Math.random() < 0.9 ? 2 : 4;
+    return newGrid;
+  };
+
+  const slideRow2048 = (row: number[]) => {
+    let arr = row.filter((v) => v !== 0);
+    for (let i = 0; i < arr.length - 1; i++) {
+      if (arr[i] === arr[i + 1]) {
+        arr[i] *= 2;
+        arr[i + 1] = 0;
+      }
+    }
+    arr = arr.filter((v) => v !== 0);
+    while (arr.length < GAME_2048_GRID_SIZE) arr.push(0);
+    return arr;
+  };
+
+  const move2048Grid = (grid: number[][], dir: string) => {
+    let newGrid = grid.map(row => [...row]);
+    const transpose = (g: number[][]) =>
+      g[0].map((_, i) => g.map((row) => row[i]));
+    const reverse = (g: number[][]) => g.map((row) => [...row].reverse());
+
+    if (dir === "left") {
+      newGrid = newGrid.map(slideRow2048);
+    } else if (dir === "right") {
+      newGrid = reverse(newGrid).map(slideRow2048);
+      newGrid = reverse(newGrid);
+    } else if (dir === "up") {
+      newGrid = transpose(newGrid).map(slideRow2048);
+      newGrid = transpose(newGrid);
+    } else if (dir === "down") {
+      newGrid = transpose(newGrid);
+      newGrid = reverse(newGrid).map(slideRow2048);
+      newGrid = reverse(newGrid);
+      newGrid = transpose(newGrid);
+    }
+
+    return newGrid;
+  };
+
+  const grids2048Equal = (a: number[][], b: number[][]) =>
+    a.every((row, r) => row.every((val, c) => val === b[r][c]));
+
+  const check2048GameOver = (grid: number[][]) => {
+    const emptyCells: {r: number, c: number}[] = [];
+    grid.forEach((row, r) =>
+      row.forEach((cell, c) => {
+        if (cell === 0) emptyCells.push({ r, c });
+      })
+    );
+    if (emptyCells.length > 0) return false;
+    
+    for (let r = 0; r < GAME_2048_GRID_SIZE; r++) {
+      for (let c = 0; c < GAME_2048_GRID_SIZE; c++) {
+        if (
+          (r < GAME_2048_GRID_SIZE - 1 && grid[r][c] === grid[r + 1][c]) ||
+          (c < GAME_2048_GRID_SIZE - 1 && grid[r][c] === grid[r][c + 1])
+        ) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  useEffect(() => {
+    if (!isPlaying || currentGameType !== '2048') return;
+    
+    if (grid2048.length === 0) {
+      let newGrid = getEmpty2048Grid();
+      newGrid = addRandom2048Tile(newGrid);
+      newGrid = addRandom2048Tile(newGrid);
+      setGrid2048(newGrid);
+      return;
+    }
+
+    const handleKey2048 = (e: KeyboardEvent) => {
+      if (gameOver2048) return;
+      let dir = "";
+      if (e.key === "ArrowLeft") dir = "left";
+      if (e.key === "ArrowRight") dir = "right";
+      if (e.key === "ArrowUp") dir = "up";
+      if (e.key === "ArrowDown") dir = "down";
+      if (!dir) return;
+
+      const moved = move2048Grid(grid2048, dir);
+      if (!grids2048Equal(grid2048, moved)) {
+        const newGrid = addRandom2048Tile(moved);
+        setGrid2048(newGrid);
+
+        const newScore = newGrid.flat().reduce((a, b) => a + b, 0);
+        setScore2048(newScore);
+
+        if (check2048GameOver(newGrid)) {
+          setGameOver2048(true);
+          setGameOver(true);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKey2048);
+    return () => window.removeEventListener("keydown", handleKey2048);
+  }, [isPlaying, currentGameType, grid2048, gameOver2048]);
+
+  // Jump Dino game logic
+  useEffect(() => {
+    dinoYRef.current = dinoY;
+  }, [dinoY]);
+
+  useEffect(() => {
+    dinoObstaclesRef.current = dinoObstacles;
+  }, [dinoObstacles]);
+
+  const dinoDraw = (ctx: CanvasRenderingContext2D) => {
+    const y = dinoYRef.current;
+    const obstacles = dinoObstaclesRef.current;
+    
+    ctx.clearRect(0, 0, DINO_WIDTH, DINO_HEIGHT);
+    
+    // Background
+    const gradient = ctx.createLinearGradient(0, 0, 0, DINO_HEIGHT);
+    gradient.addColorStop(0, '#87CEEB');
+    gradient.addColorStop(1, '#E0F6FF');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, DINO_WIDTH, DINO_HEIGHT);
+    
+    // Ground
+    ctx.fillStyle = "#8B4513";
+    ctx.fillRect(0, DINO_HEIGHT - 10, DINO_WIDTH, 10);
+    
+    // Dino
+    ctx.fillStyle = "#00AA00";
+    ctx.shadowColor = "#00AA00";
+    ctx.shadowBlur = 10;
+    ctx.fillRect(50, y, DINO_SIZE, DINO_SIZE);
+    ctx.shadowBlur = 0;
+    
+    // Obstacles
+    ctx.fillStyle = "#AA0000";
+    ctx.shadowColor = "#AA0000";
+    ctx.shadowBlur = 10;
+    obstacles.forEach(obs => {
+      ctx.fillRect(obs.x, DINO_HEIGHT - DINO_OBSTACLE_HEIGHT - 10, DINO_OBSTACLE_WIDTH, DINO_OBSTACLE_HEIGHT);
+    });
+    ctx.shadowBlur = 0;
+    
+    // Score
+    ctx.font = "bold 24px Arial";
+    ctx.fillStyle = "#000000";
+    ctx.fillText("Score: " + score, 20, 30);
+  };
+
+  const dinoUpdate = () => {
+    if (gameOver) return;
+    
+    // Move obstacles
+    const newObstacles = dinoObstaclesRef.current
+      .map(obs => ({ ...obs, x: obs.x - 8 }))
+      .filter(obs => obs.x > -DINO_OBSTACLE_WIDTH);
+    
+    // Check collision
+    const dinoX = 50;
+    const y = dinoYRef.current;
+    for (const obs of newObstacles) {
+      if (
+        dinoX < obs.x + DINO_OBSTACLE_WIDTH &&
+        dinoX + DINO_SIZE > obs.x &&
+        y + DINO_SIZE > DINO_HEIGHT - DINO_OBSTACLE_HEIGHT - 10
+      ) {
+        setGameOver(true);
+        return;
+      }
+    }
+    
+    // Add score for passed obstacles
+    newObstacles.forEach(obs => {
+      if (obs.x + DINO_OBSTACLE_WIDTH < dinoX && obs.x + DINO_OBSTACLE_WIDTH >= dinoX - 8) {
+        setScore(prev => prev + 10);
+      }
+    });
+    
+    setDinoObstacles(newObstacles);
+    
+    if (dinoCanvasRef.current) {
+      const ctx = dinoCanvasRef.current.getContext("2d");
+      if (ctx) dinoDraw(ctx);
+    }
+  };
+
+  useEffect(() => {
+    if (!isPlaying || gameOver || currentGameType !== 'jump-dino') return;
+    
+    // Spawn obstacles
+    const spawnInterval = setInterval(() => {
+      setDinoObstacles(prev => [...prev, { x: DINO_WIDTH, id: Date.now() }]);
+    }, 2000);
+    
+    // Game loop
+    const gameInterval = setInterval(() => {
+      dinoUpdate();
+    }, 30);
+    
+    // Initialize canvas
+    if (dinoCanvasRef.current) {
+      const ctx = dinoCanvasRef.current.getContext("2d");
+      if (ctx) dinoDraw(ctx);
+    }
+    
+    return () => {
+      clearInterval(spawnInterval);
+      clearInterval(gameInterval);
+    };
+  }, [isPlaying, gameOver, currentGameType]);
+
+  // Jump Dino controls
+  useEffect(() => {
+    if (!isPlaying || currentGameType !== 'jump-dino') return;
+    
+    const handleJump = (e: KeyboardEvent) => {
+      if (e.key === " " && !dinoIsJumping) {
+        setDinoIsJumping(true);
+        setDinoY(DINO_HEIGHT - DINO_SIZE - 20 - DINO_JUMP_HEIGHT);
+        setTimeout(() => {
+          setDinoY(DINO_HEIGHT - DINO_SIZE - 20);
+          setDinoIsJumping(false);
+        }, 600);
+      }
+    };
+    
+    document.addEventListener("keydown", handleJump);
+    return () => document.removeEventListener("keydown", handleJump);
+  }, [isPlaying, currentGameType, dinoIsJumping]);
+
+  // Maze Run game logic
+  const generateMaze = () => {
+    const maze: number[][] = Array(MAZE_ROWS)
+      .fill(null)
+      .map(() => Array(MAZE_COLS).fill(0));
+    
+    // Add walls
+    for (let r = 0; r < MAZE_ROWS; r++) {
+      for (let c = 0; c < MAZE_COLS; c++) {
+        if (r === 0 || r === MAZE_ROWS - 1 || c === 0 || c === MAZE_COLS - 1) {
+          maze[r][c] = 1; // Wall
+        } else if (Math.random() < 0.25) {
+          maze[r][c] = 1; // Random walls
+        }
+      }
+    }
+    
+    // Set start and goal
+    maze[1][1] = 0; // Start
+    maze[MAZE_ROWS - 2][MAZE_COLS - 2] = 2; // Goal
+    
+    return maze;
+  };
+
+  const mazeDraw = (ctx: CanvasRenderingContext2D) => {
+    const map = mazeMap;
+    const player = mazePlayer;
+    
+    ctx.clearRect(0, 0, MAZE_WIDTH, MAZE_HEIGHT);
+    
+    // Draw maze
+    for (let r = 0; r < MAZE_ROWS; r++) {
+      for (let c = 0; c < MAZE_COLS; c++) {
+        if (map[r][c] === 1) {
+          // Wall
+          ctx.fillStyle = "#333333";
+          ctx.fillRect(c * MAZE_TILE_SIZE, r * MAZE_TILE_SIZE, MAZE_TILE_SIZE, MAZE_TILE_SIZE);
+        } else if (map[r][c] === 2) {
+          // Goal
+          ctx.fillStyle = "#00FF00";
+          ctx.shadowColor = "#00FF00";
+          ctx.shadowBlur = 20;
+          ctx.fillRect(c * MAZE_TILE_SIZE, r * MAZE_TILE_SIZE, MAZE_TILE_SIZE, MAZE_TILE_SIZE);
+          ctx.shadowBlur = 0;
+        } else {
+          // Path
+          ctx.fillStyle = "#111111";
+          ctx.fillRect(c * MAZE_TILE_SIZE, r * MAZE_TILE_SIZE, MAZE_TILE_SIZE, MAZE_TILE_SIZE);
+        }
+        
+        // Grid lines
+        ctx.strokeStyle = "#222222";
+        ctx.strokeRect(c * MAZE_TILE_SIZE, r * MAZE_TILE_SIZE, MAZE_TILE_SIZE, MAZE_TILE_SIZE);
+      }
+    }
+    
+    // Draw player
+    ctx.fillStyle = "#0088FF";
+    ctx.shadowColor = "#0088FF";
+    ctx.shadowBlur = 15;
+    ctx.beginPath();
+    ctx.arc(
+      player.x * MAZE_TILE_SIZE + MAZE_TILE_SIZE / 2,
+      player.y * MAZE_TILE_SIZE + MAZE_TILE_SIZE / 2,
+      MAZE_TILE_SIZE / 3,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  };
+
+  useEffect(() => {
+    if (!isPlaying || currentGameType !== 'maze-run') return;
+    
+    if (mazeMap.length === 0) {
+      setMazeMap(generateMaze());
+      return;
+    }
+    
+    if (mazeCanvasRef.current) {
+      const ctx = mazeCanvasRef.current.getContext("2d");
+      if (ctx) mazeDraw(ctx);
+    }
+  }, [isPlaying, currentGameType, mazeMap, mazePlayer]);
+
+  // Maze Run controls
+  useEffect(() => {
+    if (!isPlaying || currentGameType !== 'maze-run' || mazeWin) return;
+    
+    const handleMazeKey = (e: KeyboardEvent) => {
+      let { x, y } = mazePlayer;
+      if (e.key === "ArrowUp") y--;
+      if (e.key === "ArrowDown") y++;
+      if (e.key === "ArrowLeft") x--;
+      if (e.key === "ArrowRight") x++;
+
+      if (mazeMap[y] && mazeMap[y][x] !== 1) {
+        setMazePlayer({ x, y });
+        if (mazeMap[y][x] === 2) {
+          setMazeWin(true);
+          setGameOver(true);
+        }
+      }
+    };
+    
+    document.addEventListener("keydown", handleMazeKey);
+    return () => document.removeEventListener("keydown", handleMazeKey);
+  }, [isPlaying, currentGameType, mazePlayer, mazeMap, mazeWin]);
+
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -2900,6 +3369,201 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
                             </div>
                             <div className="pixel-text text-sm neon-text-yellow">
                               Lives: {brickLives} • Survive 1 minute for 3 trophies!
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {currentGameType === 'minesweeper' && (
+                        <div className="flex flex-col items-center justify-center w-full h-full p-6">
+                          <div className="mb-4 text-center">
+                            <div className="pixel-text text-2xl neon-text-cyan mb-2">
+                              {mineGameOver ? "💥 GAME OVER!" : mineWin ? "🏆 YOU WIN!" : "💣 MINESWEEPER"}
+                            </div>
+                          </div>
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: `repeat(${MINE_COLS}, 50px)`,
+                              gap: "3px",
+                              padding: "15px",
+                              backgroundColor: "#0a0a1a",
+                              borderRadius: "12px",
+                              border: "4px solid #FF00FF",
+                              boxShadow: "0 0 30px #FF00FF"
+                            }}
+                          >
+                            {mineBoard.map((row, r) =>
+                              row.map((cell, c) => (
+                                <div
+                                  key={`${r}-${c}`}
+                                  onClick={() => handleMineClick(r, c)}
+                                  onContextMenu={(e) => handleMineRightClick(e, r, c)}
+                                  style={{
+                                    width: 50,
+                                    height: 50,
+                                    background: cell.revealed
+                                      ? cell.mine
+                                        ? "linear-gradient(135deg, #FF0000, #AA0000)"
+                                        : "linear-gradient(135deg, #333, #222)"
+                                      : "linear-gradient(135deg, #555, #444)",
+                                    display: "flex",
+                                    justifyContent: "center",
+                                    alignItems: "center",
+                                    fontSize: "20px",
+                                    fontWeight: "bold",
+                                    color: cell.revealed
+                                      ? cell.mine
+                                        ? "white"
+                                        : "#00FFFF"
+                                      : "yellow",
+                                    border: "2px solid #222",
+                                    borderRadius: "4px",
+                                    cursor: "pointer",
+                                    boxShadow: cell.revealed ? "inset 0 0 10px rgba(0,0,0,0.5)" : "0 0 10px rgba(255,255,255,0.2)"
+                                  }}
+                                >
+                                  {cell.flagged
+                                    ? "🚩"
+                                    : cell.revealed
+                                    ? cell.mine
+                                      ? "💣"
+                                      : cell.neighbor > 0
+                                      ? cell.neighbor
+                                      : ""
+                                    : ""}
+                                </div>
+                              ))
+                            )}
+                          </div>
+                          <div className="mt-6 text-center">
+                            <div className="pixel-text text-lg neon-text-cyan mb-3">
+                              💣 LEFT CLICK: REVEAL • RIGHT CLICK: FLAG
+                            </div>
+                            <div className="pixel-text text-sm neon-text-yellow">
+                              Find all {MINE_COUNT} mines! Survive 1 minute for 3 trophies!
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {currentGameType === '2048' && (
+                        <div className="flex flex-col items-center justify-center w-full h-full p-6">
+                          <div className="mb-4 text-center">
+                            <div className="pixel-text text-2xl neon-text-cyan mb-2">🔢 2048</div>
+                            <div className="pixel-text text-xl neon-text-yellow">Score: {score2048}</div>
+                            {gameOver2048 && <div className="pixel-text text-xl neon-text-magenta mt-2">GAME OVER!</div>}
+                          </div>
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: `repeat(${GAME_2048_GRID_SIZE}, ${GAME_2048_TILE_SIZE}px)`,
+                              gap: `${GAME_2048_GAP}px`,
+                              background: "#0a0a1a",
+                              padding: "15px",
+                              borderRadius: "12px",
+                              border: "4px solid #FFD700",
+                              boxShadow: "0 0 30px #FFD700"
+                            }}
+                          >
+                            {grid2048.map((row, r) =>
+                              row.map((val, c) => {
+                                const colors: {[key: number]: {bg: string, text: string}} = {
+                                  0: {bg: "#3a3a3a", text: "#776e65"},
+                                  2: {bg: "#eee4da", text: "#776e65"},
+                                  4: {bg: "#ede0c8", text: "#776e65"},
+                                  8: {bg: "#f2b179", text: "#f9f6f2"},
+                                  16: {bg: "#f59563", text: "#f9f6f2"},
+                                  32: {bg: "#f67c5f", text: "#f9f6f2"},
+                                  64: {bg: "#f65e3b", text: "#f9f6f2"},
+                                  128: {bg: "#edcf72", text: "#f9f6f2"},
+                                  256: {bg: "#edcc61", text: "#f9f6f2"},
+                                  512: {bg: "#edc850", text: "#f9f6f2"},
+                                  1024: {bg: "#edc53f", text: "#f9f6f2"},
+                                  2048: {bg: "#edc22e", text: "#f9f6f2"},
+                                };
+                                const style = colors[val] || {bg: "#3c3a32", text: "#f9f6f2"};
+                                return (
+                                  <div
+                                    key={`${r}-${c}`}
+                                    style={{
+                                      width: GAME_2048_TILE_SIZE,
+                                      height: GAME_2048_TILE_SIZE,
+                                      background: style.bg,
+                                      color: style.text,
+                                      fontSize: val > 512 ? "24px" : "32px",
+                                      fontWeight: "bold",
+                                      borderRadius: "8px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      boxShadow: val !== 0 ? "0 0 15px rgba(255,215,0,0.5)" : "none"
+                                    }}
+                                  >
+                                    {val !== 0 ? val : ""}
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                          <div className="mt-6 text-center">
+                            <div className="pixel-text text-lg neon-text-cyan mb-3">
+                              🔢 ARROW KEYS: SLIDE TILES • MERGE TO 2048!
+                            </div>
+                            <div className="pixel-text text-sm neon-text-yellow">
+                              Combine tiles to reach 2048! Survive 1 minute for 3 trophies!
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {currentGameType === 'jump-dino' && (
+                        <div className="flex flex-col items-center justify-center w-full h-full">
+                          <canvas 
+                            ref={dinoCanvasRef} 
+                            width={DINO_WIDTH} 
+                            height={DINO_HEIGHT} 
+                            style={{ 
+                              backgroundColor: "#87CEEB", 
+                              border: "4px solid #00AA00",
+                              borderRadius: "12px",
+                              boxShadow: "0 0 30px #00AA00, inset 0 0 20px rgba(0,170,0,0.2)",
+                              maxWidth: "90vw",
+                              maxHeight: "90vh"
+                            }} 
+                          />
+                          <div className="mt-6 text-center">
+                            <div className="pixel-text text-lg neon-text-cyan mb-3">
+                              🦖 SPACEBAR: JUMP • AVOID OBSTACLES!
+                            </div>
+                            <div className="pixel-text text-sm neon-text-yellow">
+                              Jump over red obstacles! Survive 1 minute for 3 trophies!
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {currentGameType === 'maze-run' && (
+                        <div className="flex flex-col items-center justify-center w-full h-full">
+                          <canvas 
+                            ref={mazeCanvasRef} 
+                            width={MAZE_WIDTH} 
+                            height={MAZE_HEIGHT} 
+                            style={{ 
+                              backgroundColor: "#111111", 
+                              border: "4px solid #0088FF",
+                              borderRadius: "12px",
+                              boxShadow: "0 0 30px #0088FF, inset 0 0 20px rgba(0,136,255,0.2)",
+                              maxWidth: "90vw",
+                              maxHeight: "90vh"
+                            }} 
+                          />
+                          <div className="mt-6 text-center">
+                            <div className="pixel-text text-lg neon-text-cyan mb-3">
+                              🌀 ARROW KEYS: NAVIGATE • FIND THE GREEN EXIT!
+                            </div>
+                            <div className="pixel-text text-sm neon-text-yellow">
+                              {mazeWin ? "🏆 YOU ESCAPED! Congratulations!" : "Navigate through the maze to the green goal!"}
                             </div>
                           </div>
                         </div>
