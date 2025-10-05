@@ -79,7 +79,7 @@ const marqueeItems = [
 export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPageProps) {
   const marqueeRef = useRef<HTMLDivElement>(null);
 
-add   // Lock scroll when landing page is mounted
+  // Lock scroll when landing page is mounted
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
