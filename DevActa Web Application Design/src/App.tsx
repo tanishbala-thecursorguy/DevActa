@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { UserProvider, useUser, UserProfile } from "./contexts/UserContext";
 import { Navigation } from "./components/Navigation";
 import { FuturisticLandingPage } from "./components/FuturisticLandingPage";
+import { ProfileSetupSurvey } from "./components/ProfileSetupSurvey";
 import { FeedPage } from "./components/FeedPage";
 import { LeaderboardPage } from "./components/LeaderboardPage";
 import { ArcadeGamesPage } from "./components/ArcadeGamesPage";
@@ -12,13 +14,19 @@ import { HiringPage } from "./components/HiringPage";
 import { SettingsPage } from "./components/SettingsPage";
 import { RetroGameInterface } from "./components/RetroGameInterface";
 
-export default function App() {
-  const [appState, setAppState] = useState<'landing' | 'app'>('landing');
+function AppContent() {
+  const [appState, setAppState] = useState<'landing' | 'survey' | 'app'>('landing');
   const [currentPage, setCurrentPage] = useState("feed");
   const [selectedGame, setSelectedGame] = useState<{ id: number; title: string } | null>(null);
   const [gameState, setGameState] = useState<'games' | 'retro-interface'>('games');
+  const { setUserProfile } = useUser();
 
   const handleGetStarted = () => {
+    setAppState('survey');
+  };
+
+  const handleProfileComplete = (profileData: UserProfile) => {
+    setUserProfile(profileData);
     setAppState('app');
   };
 
@@ -91,6 +99,10 @@ export default function App() {
     return <FuturisticLandingPage onGetStarted={handleGetStarted} />;
   }
 
+  if (appState === 'survey') {
+    return <ProfileSetupSurvey onComplete={handleProfileComplete} />;
+  }
+
   return (
     <ThemeProvider>
       <div className="min-h-screen bg-background">
@@ -101,5 +113,13 @@ export default function App() {
         {renderPage()}
       </div>
     </ThemeProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <UserProvider>
+      <AppContent />
+    </UserProvider>
   );
 }

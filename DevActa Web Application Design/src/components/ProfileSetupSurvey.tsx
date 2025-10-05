@@ -1,12 +1,23 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Label } from "./ui/label";
 import { Plus, X } from "lucide-react";
 
+interface UserProfile {
+  username: string;
+  firstName: string;
+  lastName: string;
+  bio: string;
+  profilePicture: string | null;
+  githubLink: string;
+  linkedinLink: string;
+  otherSocials: string[];
+}
+
 interface ProfileSetupSurveyProps {
-  onComplete: () => void;
+  onComplete: (profileData: UserProfile) => void;
 }
 
 export function ProfileSetupSurvey({ onComplete }: ProfileSetupSurveyProps) {
@@ -22,6 +33,7 @@ export function ProfileSetupSurvey({ onComplete }: ProfileSetupSurveyProps) {
     otherSocials: [""],
   });
   const [showSuccess, setShowSuccess] = useState(false);
+  const [profilePictureURL, setProfilePictureURL] = useState<string | null>(null);
 
   const totalSteps = 5;
 
@@ -31,8 +43,21 @@ export function ProfileSetupSurvey({ onComplete }: ProfileSetupSurveyProps) {
     } else {
       // Show success animation
       setShowSuccess(true);
+      
+      // Prepare profile data
+      const profileData: UserProfile = {
+        username: formData.username,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        bio: formData.bio,
+        profilePicture: profilePictureURL,
+        githubLink: formData.githubLink,
+        linkedinLink: formData.linkedinLink,
+        otherSocials: formData.otherSocials.filter(s => s.trim() !== ""),
+      };
+      
       setTimeout(() => {
-        onComplete();
+        onComplete(profileData);
       }, 3000);
     }
   };
@@ -69,10 +94,18 @@ export function ProfileSetupSurvey({ onComplete }: ProfileSetupSurveyProps) {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
       setFormData({
         ...formData,
-        profilePicture: e.target.files[0],
+        profilePicture: file,
       });
+      
+      // Create a URL for the image to display
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePictureURL(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 

@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { PostDialog } from "./PostDialog";
 import { mockUsers, mockRepos, currentUser } from "../data/mockData";
+import { useUser } from "../contexts/UserContext";
 
 interface FeedPageProps {
   onPageChange: (page: string) => void;
@@ -24,6 +25,16 @@ interface Post {
 export function FeedPage({ onPageChange }: FeedPageProps) {
   const [postDialogOpen, setPostDialogOpen] = useState(false);
   const [posts, setPosts] = useState<Post[]>(mockRepos.map(post => ({ ...post, userReaction: null })));
+  const { userProfile } = useUser();
+  
+  // Use user profile if available, otherwise fall back to mock user
+  const displayUser = userProfile ? {
+    name: `${userProfile.firstName} ${userProfile.lastName}`,
+    avatar: userProfile.profilePicture || currentUser.avatar,
+    github: userProfile.githubLink || currentUser.github,
+    trophies: userProfile.trophies || 0,
+    role: "Developer",
+  } : currentUser;
 
   const handleNewPost = (data: { title: string; description: string; githubLink: string }) => {
     const newPost: Post = {
@@ -85,8 +96,8 @@ export function FeedPage({ onPageChange }: FeedPageProps) {
             <Card className="p-4 bg-card/70 backdrop-blur-md border-border/50">
               <div className="flex items-center space-x-4">
                 <Avatar>
-                  <AvatarImage src={currentUser.avatar} alt={currentUser.name} />
-                  <AvatarFallback>{currentUser.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                  <AvatarImage src={displayUser.avatar} alt={displayUser.name} />
+                  <AvatarFallback>{displayUser.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                 </Avatar>
                 <Button 
                   variant="outline" 
@@ -113,20 +124,23 @@ export function FeedPage({ onPageChange }: FeedPageProps) {
                 <Card className="p-6 bg-card sticky-card">
                   <div className="text-center">
                     <Avatar className="w-20 h-20 mx-auto mb-4">
-                      <AvatarImage src={currentUser.avatar} alt={currentUser.name} />
-                      <AvatarFallback>{currentUser.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                      <AvatarImage src={displayUser.avatar} alt={displayUser.name} />
+                      <AvatarFallback>{displayUser.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                     </Avatar>
-                    <h3 className="text-lg mb-1">{currentUser.name}</h3>
-                    <p className="text-muted-foreground mb-3">{currentUser.role}</p>
+                    <h3 className="text-lg mb-1">{displayUser.name}</h3>
+                    <p className="text-muted-foreground mb-3">{displayUser.role}</p>
+                    {userProfile?.bio && (
+                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{userProfile.bio}</p>
+                    )}
                     <div className="flex items-center justify-center space-x-2 mb-4">
                       <span className="text-2xl">🏆</span>
-                      <span className="text-lg">{currentUser.trophies}</span>
+                      <span className="text-lg">{displayUser.trophies}</span>
                     </div>
                     <Button 
                       variant="outline" 
                       size="sm" 
                       className="w-full"
-                      onClick={() => window.open(currentUser.github, '_blank')}
+                      onClick={() => window.open(displayUser.github, '_blank')}
                     >
                       View GitHub
                     </Button>
