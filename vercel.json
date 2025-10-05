@@ -1,0 +1,12 @@
+{
+  "buildCommand": "cd 'DevActa Web Application Design' && npm install && npm run build",
+  "outputDirectory": "DevActa Web Application Design/dist",
+  "installCommand": "cd 'DevActa Web Application Design' && npm install",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

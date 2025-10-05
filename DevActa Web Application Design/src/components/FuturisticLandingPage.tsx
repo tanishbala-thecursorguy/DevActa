@@ -1,5 +1,3 @@
-"use client";
-
 import { cn } from "../lib/utils";
 import { ReactNode, useEffect, useRef } from "react";
 import logoImage from "figma:asset/32a9f97ebfa773dabe97368d7e406f5ed1e26205.png";
@@ -126,26 +124,26 @@ export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPagePro
           <div className="flex flex-col max-w-xl z-20">
             {/* Logo */}
             <div className="mb-8">
-              <img 
-                src={logoImage} 
-                alt="DevActa Logo" 
+              <img
+                src={logoImage}
+                alt="DevActa Logo"
                 className="w-24 h-24 object-contain"
               />
             </div>
-            
+
             {/* Title */}
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-medium leading-tight tracking-tight text-foreground mb-8">
               DevActa
             </h1>
-            
+
             {/* Description */}
             <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-8">
               Where developers compete, build, and grow together. Join thousands of developers worldwide.
             </p>
-            
+
             {/* Button */}
             <div className="mb-8">
-              <button 
+              <button
                 onClick={onGetStarted}
                 className="group relative px-8 py-4 bg-black text-white rounded-md font-medium overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl"
               >
@@ -153,7 +151,7 @@ export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPagePro
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
               </button>
             </div>
-            
+
             {/* Footer */}
             <p className="text-sm text-muted-foreground/60">
               Powered by Acta
@@ -173,10 +171,10 @@ export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPagePro
                   </div>
                 ))}
               </VerticalMarquee>
-              
+
               {/* Top vignette - maximum fade */}
               <div className="pointer-events-none absolute top-0 left-0 right-0 h-[400px] bg-gradient-to-b from-background from-30% via-background/98 via-50% via-background/85 via-70% to-transparent z-20"></div>
-              
+
               {/* Bottom vignette - maximum fade */}
               <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-[400px] bg-gradient-to-t from-background from-30% via-background/98 via-50% via-background/85 via-70% to-transparent z-20"></div>
             </div>

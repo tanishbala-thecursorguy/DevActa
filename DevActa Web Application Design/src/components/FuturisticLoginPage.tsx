@@ -44,10 +44,10 @@ export function FuturisticLoginPage({ onLogin, onSignUp }: FuturisticLoginPagePr
     <div className="professional-landing min-h-screen relative overflow-hidden">
       {/* Professional Grid Background */}
       <div className="landing-grid-background"></div>
-      
+
       {/* Gradient Overlay */}
       <div className="landing-gradient-overlay"></div>
-      
+
       {/* Floating Dots Animation */}
       <div className="landing-dots-container">
         {[...Array(12)].map((_, i) => (
@@ -65,15 +65,15 @@ export function FuturisticLoginPage({ onLogin, onSignUp }: FuturisticLoginPagePr
 
       {/* Split Screen Layout */}
       <div className="grid lg:grid-cols-2 min-h-screen relative z-10">
-        
+
         {/* Left Side - Professional Branding */}
         <div className="hidden lg:flex items-center justify-center relative bg-gradient-to-br from-white to-slate-50">
           {/* Center Logo */}
           <div className="text-center">
             <div className="logo-professional mb-8">
-              <img 
-                src={logoImage} 
-                alt="DevArena" 
+              <img
+                src={logoImage}
+                alt="DevArena"
                 className="w-40 h-40 mx-auto object-contain"
               />
             </div>
@@ -92,12 +92,12 @@ export function FuturisticLoginPage({ onLogin, onSignUp }: FuturisticLoginPagePr
         {/* Right Side - Login Form */}
         <div className="flex items-center justify-center p-8 bg-white">
           <div className="w-full max-w-md">
-            
+
             {/* Logo for mobile */}
             <div className="lg:hidden mb-8 text-center">
-              <img 
-                src={logoImage} 
-                alt="DevArena" 
+              <img
+                src={logoImage}
+                alt="DevArena"
                 className="w-20 h-20 mx-auto object-contain mb-4"
               />
               <h1 className="professional-title text-3xl mb-2">
