@@ -1,9 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { Navigation } from "./components/Navigation";
 import { FuturisticLandingPage } from "./components/FuturisticLandingPage";
-import { FuturisticLoginPage } from "./components/FuturisticLoginPage";
-import { ProfileSetupSurvey } from "./components/ProfileSetupSurvey";
 import { FeedPage } from "./components/FeedPage";
 import { LeaderboardPage } from "./components/LeaderboardPage";
 import { ArcadeGamesPage } from "./components/ArcadeGamesPage";
@@ -13,84 +11,16 @@ import { ProfilePage } from "./components/ProfilePage";
 import { HiringPage } from "./components/HiringPage";
 import { SettingsPage } from "./components/SettingsPage";
 import { RetroGameInterface } from "./components/RetroGameInterface";
-import { getCurrentUser, onAuthStateChange, upsertProfile } from "./services/authService";
 
 export default function App() {
-  const [appState, setAppState] = useState<'landing' | 'login' | 'survey' | 'app'>('landing');
+  const [appState, setAppState] = useState<'landing' | 'app'>('landing');
   const [currentPage, setCurrentPage] = useState("feed");
   const [selectedGame, setSelectedGame] = useState<{ id: number; title: string } | null>(null);
   const [gameState, setGameState] = useState<'games' | 'retro-interface'>('games');
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  // Check for existing session on mount
-  useEffect(() => {
-    checkUser();
-    
-    // Listen for auth changes
-    const { data: authListener } = onAuthStateChange(async (user) => {
-      setUser(user);
-      if (user) {
-        // User logged in, create/update profile
-        try {
-          await upsertProfile(user);
-          setAppState('survey'); // Go to survey if first time, or app if returning
-        } catch (error) {
-          console.error('Error upserting profile:', error);
-        }
-      } else {
-        // User logged out
-        setAppState('landing');
-      }
-      setLoading(false);
-    });
-
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
-  }, []);
-
-  const checkUser = async () => {
-    try {
-      const currentUser = await getCurrentUser();
-      setUser(currentUser);
-      if (currentUser) {
-        setAppState('app'); // If user exists, go straight to app
-      }
-    } catch (error) {
-      console.error('Error checking user:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleGetStarted = () => {
     setAppState('app');
   };
-
-  const handleLogin = () => {
-    setAppState('app');
-  };
-
-  const handleSignUp = () => {
-    setAppState('app');
-  };
-
-  const handleSurveyComplete = () => {
-    setAppState('app');
-  };
-
-  // Show loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
 
   const handlePageChange = (page: string) => {
     console.log("Page changing to:", page);
@@ -159,14 +89,6 @@ export default function App() {
   // Render based on app state
   if (appState === 'landing') {
     return <FuturisticLandingPage onGetStarted={handleGetStarted} />;
-  }
-
-  if (appState === 'login') {
-    return <FuturisticLoginPage onLogin={handleLogin} onSignUp={handleSignUp} />;
-  }
-
-  if (appState === 'survey') {
-    return <ProfileSetupSurvey onComplete={handleSurveyComplete} />;
   }
 
   return (
