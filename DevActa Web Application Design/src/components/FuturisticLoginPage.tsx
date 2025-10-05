@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
-import logoImage from "../assets/32a9f97ebfa773dabe97368d7e406f5ed1e26205.png";
 import { signInWithGitHub, signInWithLinkedIn } from "../services/authService";
 
 interface FuturisticLoginPageProps {
@@ -72,7 +71,7 @@ export function FuturisticLoginPage({ onLogin, onSignUp }: FuturisticLoginPagePr
           <div className="text-center">
             <div className="logo-professional mb-8">
               <img
-                src={logoImage}
+                src="/logo.png"
                 alt="DevArena"
                 className="w-40 h-40 mx-auto object-contain"
               />
@@ -96,7 +95,7 @@ export function FuturisticLoginPage({ onLogin, onSignUp }: FuturisticLoginPagePr
             {/* Logo for mobile */}
             <div className="lg:hidden mb-8 text-center">
               <img
-                src={logoImage}
+                src="/logo.png"
                 alt="DevArena"
                 className="w-20 h-20 mx-auto object-contain mb-4"
               />

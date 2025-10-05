@@ -1,6 +1,5 @@
 import React, { ReactNode, useEffect, useRef } from "react";
 import { cn } from "../lib/utils";
-import logoImage from "../assets/32a9f97ebfa773dabe97368d7e406f5ed1e26205.png";
 
 interface FuturisticLandingPageProps {
   onGetStarted: () => void;
@@ -125,7 +124,7 @@ export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPagePro
             {/* Logo */}
             <div className="mb-8">
               <img
-                src={logoImage}
+                src="/logo.png"
                 alt="DevActa Logo"
                 className="w-24 h-24 object-contain"
               />
