@@ -126,7 +126,7 @@ export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPagePro
             {/* Logo */}
             <div className="mb-8">
               <img 
-                src="https://github.com/user-attachments/assets/a11e2ad4-3e0b-43c1-9e6d-cc42e914f5d1" 
+                src="https://private-user-images.githubusercontent.com/190112310/406870035-a11e2ad4-3e0b-43c1-9e6d-cc42e914f5d1.png?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3Mzg1NTc0MjAsIm5iZiI6MTczODU1NzEyMCwicGF0aCI6Ii8xOTAxMTIzMTAvNDA2ODcwMDM1LWExMWUyYWQ0LTNlMGItNDNjMS05ZTZkLWNjNDJlOTE0ZjVkMS5wbmc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjUwMjAzJTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI1MDIwM1QxMDI1MjBaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT1kNWIzNzU5MmY3ZGNmMWNmMzY1NmZjZTU3ZTQzMjkyNDg4ODQ1NWU4ZGQxMTZhYzJlMDI0YWY1YjRjZjZhZWU0JlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCJ9.9Ey3Yjd7Ql3k1qAyE4wI1TqMPHbVwJbGPOWGqb6XFXI" 
                 alt="DevActa Logo" 
                 className="w-24 h-24 object-contain"
               />
