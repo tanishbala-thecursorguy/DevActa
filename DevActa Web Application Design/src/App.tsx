@@ -65,15 +65,15 @@ export default function App() {
   };
 
   const handleGetStarted = () => {
-    setAppState('survey');
+    setAppState('app');
   };
 
   const handleLogin = () => {
-    setAppState('survey');
+    setAppState('app');
   };
 
   const handleSignUp = () => {
-    setAppState('survey');
+    setAppState('app');
   };
 
   const handleSurveyComplete = () => {
