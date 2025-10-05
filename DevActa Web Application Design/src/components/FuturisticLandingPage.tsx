@@ -123,13 +123,12 @@ export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPagePro
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-center">
           {/* Left Content */}
           <div className="space-y-8 max-w-xl z-20">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center">
               <img 
-                src="https://github.com/user-attachments/assets/a11e2ad4-3e0b-43c1-9e6d-cc42e914f5d1" 
+                src="https://private-user-images.githubusercontent.com/190112310/406870035-a11e2ad4-3e0b-43c1-9e6d-cc42e914f5d1.png?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3Mzg1NTc0MjAsIm5iZiI6MTczODU1NzEyMCwicGF0aCI6Ii8xOTAxMTIzMTAvNDA2ODcwMDM1LWExMWUyYWQ0LTNlMGItNDNjMS05ZTZkLWNjNDJlOTE0ZjVkMS5wbmc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjUwMjAzJTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI1MDIwM1QxMDI1MjBaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT1kNWIzNzU5MmY3ZGNmMWNmMzY1NmZjZTU3ZTQzMjkyNDg4ODQ1NWU4ZGQxMTZhYzJlMDI0YWY1YjRjZjZhZWU0JlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCJ9.9Ey3Yjd7Ql3k1qAyE4wI1TqMPHbVwJbGPOWGqb6XFXI" 
                 alt="DevActa Logo" 
-                className="w-16 h-16 object-contain"
+                className="w-20 h-20 object-contain"
               />
-              <span className="text-3xl font-bold">DevActa</span>
             </div>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-medium leading-tight tracking-tight text-foreground">
               DevActa
@@ -146,7 +145,7 @@ export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPagePro
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
               </button>
             </div>
-            <p className="text-sm text-muted-foreground/60">
+            <p className="text-sm text-muted-foreground/60 mt-8">
               Powered by Acta
             </p>
           </div>
