@@ -125,25 +125,11 @@ export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPagePro
           <div className="flex flex-col max-w-xl z-20">
             {/* Logo */}
             <div className="mb-8">
-              <div className="w-24 h-24 flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg">
-                <svg 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                  className="w-16 h-16 text-white"
-                >
-                  {/* Glasses frame */}
-                  <path d="M2 12c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v2c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2v-2z" />
-                  <path d="M14 12c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v2c0 1.1-.9 2-2 2h-4c-1.1 0-2-.9-2-2v-2z" />
-                  <path d="M10 13h4" />
-                  {/* Code brackets */}
-                  <text x="5" y="14" fontSize="6" fill="white" fontWeight="bold">&lt;/&gt;</text>
-                  <text x="15.5" y="14" fontSize="6" fill="white" fontWeight="bold">&lt;/&gt;</text>
-                </svg>
-              </div>
+              <img 
+                src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 500'%3E%3Crect width='500' height='500' fill='none'/%3E%3Cg transform='translate(250,250)'%3E%3C!-- Glasses --%3E%3Cpath d='M-150,-20 Q-150,-60 -110,-60 L-50,-60 Q-10,-60 -10,-20 L-10,20 Q-10,60 -50,60 L-110,60 Q-150,60 -150,20 Z' fill='none' stroke='%23000' stroke-width='12'/%3E%3Cpath d='M10,-20 Q10,-60 50,-60 L110,-60 Q150,-60 150,-20 L150,20 Q150,60 110,60 L50,60 Q10,60 10,20 Z' fill='none' stroke='%23000' stroke-width='12'/%3E%3Cline x1='-10' y1='0' x2='10' y2='0' stroke='%23000' stroke-width='12'/%3E%3C!-- Code brackets in left lens --%3E%3Ctext x='-105' y='15' font-size='50' fill='%2300ff00' font-family='monospace' font-weight='bold'%3E%7B%3C/text%3E%3Ctext x='-55' y='15' font-size='50' fill='%2300ff00' font-family='monospace' font-weight='bold'%3E%7D%3C/text%3E%3C!-- Code brackets in right lens --%3E%3Ctext x='55' y='15' font-size='50' fill='%2300ff00' font-family='monospace' font-weight='bold'%3E%7B%3C/text%3E%3Ctext x='105' y='15' font-size='50' fill='%2300ff00' font-family='monospace' font-weight='bold'%3E%7D%3C/text%3E%3C!-- Cursor arrows --%3E%3Cpolygon points='-90,-10 -70,0 -90,10' fill='%23000'/%3E%3Cpolygon points='90,-10 110,0 90,10' fill='%23000'/%3E%3C/g%3E%3C/svg%3E" 
+                alt="DevActa Logo" 
+                className="w-24 h-24 object-contain"
+              />
             </div>
             
             {/* Title */}
