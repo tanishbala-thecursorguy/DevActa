@@ -65,11 +65,10 @@ export default function App() {
   };
 
   const handleGetStarted = () => {
-    setAppState('login');
+    setAppState('survey');
   };
 
   const handleLogin = () => {
-    // OAuth handled by authService, this is just for navigation
     setAppState('survey');
   };
 
