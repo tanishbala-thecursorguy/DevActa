@@ -167,18 +167,18 @@ export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPagePro
                 {marqueeItems.map((item, idx) => (
                   <div
                     key={idx}
-                    className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-light tracking-tight py-4 marquee-item whitespace-nowrap"
+                    className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-light tracking-tight py-8 marquee-item whitespace-nowrap"
                   >
                     {item}
                   </div>
                 ))}
               </VerticalMarquee>
               
-              {/* Top vignette */}
-              <div className="pointer-events-none absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-background via-background/50 to-transparent z-20"></div>
+              {/* Top vignette - stronger fade */}
+              <div className="pointer-events-none absolute top-0 left-0 right-0 h-80 bg-gradient-to-b from-background via-background/80 to-transparent z-20"></div>
               
-              {/* Bottom vignette */}
-              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-background via-background/50 to-transparent z-20"></div>
+              {/* Bottom vignette - stronger fade */}
+              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-80 bg-gradient-to-t from-background via-background/80 to-transparent z-20"></div>
             </div>
           </div>
         </div>
