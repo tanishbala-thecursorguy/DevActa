@@ -15,7 +15,7 @@ import { SettingsPage } from "./components/SettingsPage";
 import { RetroGameInterface } from "./components/RetroGameInterface";
 
 export default function App() {
-  const [appState, setAppState] = useState<'landing' | 'login' | 'survey' | 'app'>('landing');
+  const [appState, setAppState] = useState<'landing' | 'login' | 'survey' | 'app'>('app');
   const [currentPage, setCurrentPage] = useState("feed");
   const [selectedGame, setSelectedGame] = useState<{ id: number; title: string } | null>(null);
   const [gameState, setGameState] = useState<'games' | 'retro-interface'>('games');
