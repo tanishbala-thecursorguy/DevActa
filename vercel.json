@@ -1,7 +1,8 @@
 {
-  "buildCommand": "cd 'DevActa Web Application Design' && npm install && npm run build",
+  "buildCommand": "npm --prefix \"DevActa Web Application Design\" run build",
   "outputDirectory": "DevActa Web Application Design/dist",
-  "installCommand": "cd 'DevActa Web Application Design' && npm install",
+  "installCommand": "npm --prefix \"DevActa Web Application Design\" install",
+  "devCommand": "npm --prefix \"DevActa Web Application Design\" run dev",
   "framework": null,
   "rewrites": [
     {
