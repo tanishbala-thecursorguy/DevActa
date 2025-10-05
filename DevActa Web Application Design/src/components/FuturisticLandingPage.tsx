@@ -118,12 +118,12 @@ export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPagePro
   }, []);
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-6 py-12 overflow-hidden">
-      <div className="w-full max-w-7xl animate-fade-in-up">
+    <div className="fixed inset-0 bg-background text-foreground flex items-center justify-center px-6 overflow-hidden">
+      <div className="w-full max-w-7xl">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-center">
           {/* Left Content */}
-          <div className="space-y-8 max-w-xl">
-            <div className="flex items-center gap-4 animate-fade-in-up">
+          <div className="space-y-8 max-w-xl z-20">
+            <div className="flex items-center gap-4">
               <img 
                 src="https://github.com/user-attachments/assets/a11e2ad4-3e0b-43c1-9e6d-cc42e914f5d1" 
                 alt="DevActa Logo" 
@@ -131,13 +131,13 @@ export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPagePro
               />
               <span className="text-3xl font-bold">DevActa</span>
             </div>
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-medium leading-tight tracking-tight text-foreground animate-fade-in-up [animation-delay:200ms]">
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-medium leading-tight tracking-tight text-foreground">
               DevActa
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed animate-fade-in-up [animation-delay:400ms]">
+            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
               Where developers compete, build, and grow together. Join thousands of developers worldwide.
             </p>
-            <div className="flex flex-wrap gap-4 animate-fade-in-up [animation-delay:600ms]">
+            <div className="flex flex-wrap gap-4">
               <button 
                 onClick={onGetStarted}
                 className="group relative px-8 py-4 bg-black text-white rounded-md font-medium overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl"
@@ -146,19 +146,19 @@ export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPagePro
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
               </button>
             </div>
-            <p className="text-sm text-muted-foreground/60 animate-fade-in-up [animation-delay:800ms]">
+            <p className="text-sm text-muted-foreground/60">
               Powered by Acta
             </p>
           </div>
 
           {/* Right Marquee */}
-          <div ref={marqueeRef} className="relative h-[600px] lg:h-[700px] flex items-center justify-center animate-fade-in-up [animation-delay:400ms]">
+          <div ref={marqueeRef} className="relative h-[600px] lg:h-[700px] flex items-center justify-center z-10">
             <div className="relative w-full h-full">
               <VerticalMarquee speed={20} className="h-full">
                 {marqueeItems.map((item, idx) => (
                   <div
                     key={idx}
-                    className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-light tracking-tight py-4 marquee-item"
+                    className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-light tracking-tight py-4 marquee-item whitespace-nowrap"
                   >
                     {item}
                   </div>
@@ -166,10 +166,10 @@ export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPagePro
               </VerticalMarquee>
               
               {/* Top vignette */}
-              <div className="pointer-events-none absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-background via-background/50 to-transparent z-10"></div>
+              <div className="pointer-events-none absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-background via-background/50 to-transparent z-20"></div>
               
               {/* Bottom vignette */}
-              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-background via-background/50 to-transparent z-10"></div>
+              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-background via-background/50 to-transparent z-20"></div>
             </div>
           </div>
         </div>
