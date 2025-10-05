@@ -2,6 +2,7 @@
 
 import { cn } from "../lib/utils";
 import { ReactNode, useEffect, useRef } from "react";
+import logoImage from "figma:asset/32a9f97ebfa773dabe97368d7e406f5ed1e26205.png";
 
 interface FuturisticLandingPageProps {
   onGetStarted: () => void;
@@ -126,7 +127,7 @@ export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPagePro
             {/* Logo */}
             <div className="mb-8">
               <img 
-                src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 500'%3E%3Crect width='500' height='500' fill='none'/%3E%3Cg transform='translate(250,250)'%3E%3C!-- Glasses --%3E%3Cpath d='M-150,-20 Q-150,-60 -110,-60 L-50,-60 Q-10,-60 -10,-20 L-10,20 Q-10,60 -50,60 L-110,60 Q-150,60 -150,20 Z' fill='none' stroke='%23000' stroke-width='12'/%3E%3Cpath d='M10,-20 Q10,-60 50,-60 L110,-60 Q150,-60 150,-20 L150,20 Q150,60 110,60 L50,60 Q10,60 10,20 Z' fill='none' stroke='%23000' stroke-width='12'/%3E%3Cline x1='-10' y1='0' x2='10' y2='0' stroke='%23000' stroke-width='12'/%3E%3C!-- Code brackets in left lens --%3E%3Ctext x='-105' y='15' font-size='50' fill='%2300ff00' font-family='monospace' font-weight='bold'%3E%7B%3C/text%3E%3Ctext x='-55' y='15' font-size='50' fill='%2300ff00' font-family='monospace' font-weight='bold'%3E%7D%3C/text%3E%3C!-- Code brackets in right lens --%3E%3Ctext x='55' y='15' font-size='50' fill='%2300ff00' font-family='monospace' font-weight='bold'%3E%7B%3C/text%3E%3Ctext x='105' y='15' font-size='50' fill='%2300ff00' font-family='monospace' font-weight='bold'%3E%7D%3C/text%3E%3C!-- Cursor arrows --%3E%3Cpolygon points='-90,-10 -70,0 -90,10' fill='%23000'/%3E%3Cpolygon points='90,-10 110,0 90,10' fill='%23000'/%3E%3C/g%3E%3C/svg%3E" 
+                src={logoImage} 
                 alt="DevActa Logo" 
                 className="w-24 h-24 object-contain"
               />
