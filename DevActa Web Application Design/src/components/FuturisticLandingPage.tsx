@@ -174,11 +174,11 @@ export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPagePro
                 ))}
               </VerticalMarquee>
               
-              {/* Top vignette - stronger fade */}
-              <div className="pointer-events-none absolute top-0 left-0 right-0 h-80 bg-gradient-to-b from-background via-background/80 to-transparent z-20"></div>
+              {/* Top vignette - very strong fade */}
+              <div className="pointer-events-none absolute top-0 left-0 right-0 h-[300px] bg-gradient-to-b from-background via-background/95 via-background/70 to-transparent z-20"></div>
               
-              {/* Bottom vignette - stronger fade */}
-              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-80 bg-gradient-to-t from-background via-background/80 to-transparent z-20"></div>
+              {/* Bottom vignette - very strong fade */}
+              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-[300px] bg-gradient-to-t from-background via-background/95 via-background/70 to-transparent z-20"></div>
             </div>
           </div>
         </div>
