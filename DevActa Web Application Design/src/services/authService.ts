@@ -17,6 +17,19 @@ export async function signInWithGitHub() {
   return data;
 }
 
+// Sign in with LinkedIn
+export async function signInWithLinkedIn() {
+  const { data, error } = await supabaseAuth.auth.signInWithOAuth({
+    provider: 'linkedin_oidc',
+    options: {
+      redirectTo: window.location.origin,
+    },
+  });
+
+  if (error) throw error;
+  return data;
+}
+
 // Get current user
 export async function getCurrentUser() {
   const { data: { user }, error } = await supabaseAuth.auth.getUser();
