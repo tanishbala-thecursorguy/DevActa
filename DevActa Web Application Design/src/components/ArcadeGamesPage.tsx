@@ -98,6 +98,17 @@ const CAR_OBSTACLE_WIDTH = 60;
 const CAR_OBSTACLE_HEIGHT = 100;
 const CAR_OBSTACLE_SPEED = 7;
 const CAR_LANE_WIDTH = 120;
+
+// Mario game constants
+const MARIO_WIDTH = 800;
+const MARIO_HEIGHT = 600;
+const MARIO_PLAYER_WIDTH = 32;
+const MARIO_PLAYER_HEIGHT = 32;
+const MARIO_GRAVITY = 0.8;
+const MARIO_JUMP_FORCE = -15;
+const MARIO_MOVE_SPEED = 5;
+const MARIO_LEVEL_WIDTH = 1600;
+const MARIO_TILE_SIZE = 32;
 const CAR_NUM_LANES = 4;
 const CAR_ROAD_WIDTH = CAR_LANE_WIDTH * CAR_NUM_LANES;
 
@@ -165,7 +176,7 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [coins, setCoins] = useState(5);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentGameType, setCurrentGameType] = useState<'snake' | 'tetris' | 'pac-man' | 'pinball' | 'breakout' | 'flappy' | 'car-race' | 'pong' | 'space-shooter' | 'brick-blast' | 'minesweeper' | '2048' | 'jump-dino' | 'maze-run'>('snake');
+  const [currentGameType, setCurrentGameType] = useState<'snake' | 'tetris' | 'pac-man' | 'pinball' | 'breakout' | 'flappy' | 'car-race' | 'pong' | 'space-shooter' | 'brick-blast' | 'minesweeper' | '2048' | 'jump-dino' | 'maze-run' | 'mario'>('snake');
   
   // Snake game state
   const [snake, setSnake] = useState([{ x: 10, y: 10 }]);
@@ -273,6 +284,28 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
   const [mazeMap, setMazeMap] = useState<number[][]>([]);
   const [mazePlayer, setMazePlayer] = useState({ x: 1, y: 1 });
   const [mazeWin, setMazeWin] = useState(false);
+
+  // Mario game state
+  const [marioPlayer, setMarioPlayer] = useState({
+    x: 50,
+    y: MARIO_HEIGHT - MARIO_PLAYER_HEIGHT - 100,
+    vx: 0,
+    vy: 0,
+    onGround: false,
+    facing: 1, // 1 for right, -1 for left
+    size: 'small' // 'small' or 'big'
+  });
+  const [marioCamera, setMarioCamera] = useState({ x: 0 });
+  const [marioEnemies, setMarioEnemies] = useState<Array<{
+    x: number;
+    y: number;
+    vx: number;
+    type: 'goomba' | 'koopa';
+    alive: boolean;
+  }>>([]);
+  const [marioCoins, setMarioCoins] = useState<Array<{ x: number; y: number; collected: boolean }>>([]);
+  const [marioScore, setMarioScore] = useState(0);
+  const [marioLives, setMarioLives] = useState(3);
   const mazeCanvasRef = useRef<HTMLCanvasElement>(null);
   
   // Common game state
@@ -299,7 +332,7 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
           
           // End these games after 1 minute
           if (currentGameType === 'flappy' || currentGameType === 'car-race' || currentGameType === 'space-shooter' || 
-              currentGameType === 'brick-blast' || currentGameType === 'jump-dino') {
+              currentGameType === 'brick-blast' || currentGameType === 'jump-dino' || currentGameType === 'mario') {
             setGameOver(true);
             // Return to games page after 2 seconds
             setTimeout(() => {
@@ -1019,6 +1052,38 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
         setMazeMap([]);
         setMazePlayer({ x: 1, y: 1 });
         setMazeWin(false);
+      } else if (gameType === 'mario') {
+        setMarioPlayer({
+          x: 50,
+          y: MARIO_HEIGHT - MARIO_PLAYER_HEIGHT - 100,
+          vx: 0,
+          vy: 0,
+          onGround: false,
+          facing: 1,
+          size: 'small'
+        });
+        setMarioCamera({ x: 0 });
+        setMarioScore(0);
+        setMarioLives(3);
+        
+        // Generate enemies
+        const enemies = [
+          { x: 300, y: MARIO_HEIGHT - MARIO_PLAYER_HEIGHT - 100, vx: -1, type: 'goomba' as const, alive: true },
+          { x: 500, y: MARIO_HEIGHT - MARIO_PLAYER_HEIGHT - 100, vx: -1, type: 'goomba' as const, alive: true },
+          { x: 800, y: MARIO_HEIGHT - MARIO_PLAYER_HEIGHT - 100, vx: -1, type: 'koopa' as const, alive: true },
+          { x: 1200, y: MARIO_HEIGHT - MARIO_PLAYER_HEIGHT - 100, vx: -1, type: 'goomba' as const, alive: true },
+        ];
+        setMarioEnemies(enemies);
+        
+        // Generate coins
+        const coins = [
+          { x: 200, y: MARIO_HEIGHT - MARIO_PLAYER_HEIGHT - 200, collected: false },
+          { x: 400, y: MARIO_HEIGHT - MARIO_PLAYER_HEIGHT - 200, collected: false },
+          { x: 600, y: MARIO_HEIGHT - MARIO_PLAYER_HEIGHT - 200, collected: false },
+          { x: 900, y: MARIO_HEIGHT - MARIO_PLAYER_HEIGHT - 200, collected: false },
+          { x: 1100, y: MARIO_HEIGHT - MARIO_PLAYER_HEIGHT - 200, collected: false },
+        ];
+        setMarioCoins(coins);
       }
     }
   };
@@ -2909,6 +2974,370 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
     return () => document.removeEventListener("keydown", handleMazeKey);
   }, [isPlaying, currentGameType, mazePlayer, mazeMap, mazeWin]);
 
+  // Mario game functions
+  const marioDraw = (ctx: CanvasRenderingContext2D) => {
+    ctx.clearRect(0, 0, MARIO_WIDTH, MARIO_HEIGHT);
+    
+    // Draw sky gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, MARIO_HEIGHT);
+    gradient.addColorStop(0, '#87CEEB');
+    gradient.addColorStop(1, '#98FB98');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, MARIO_WIDTH, MARIO_HEIGHT);
+    
+    // Draw ground
+    ctx.fillStyle = '#8B4513';
+    ctx.fillRect(0, MARIO_HEIGHT - 100, MARIO_LEVEL_WIDTH, 100);
+    
+    // Draw grass on ground
+    ctx.fillStyle = '#228B22';
+    ctx.fillRect(0, MARIO_HEIGHT - 100, MARIO_LEVEL_WIDTH, 20);
+    
+    // Draw platforms
+    ctx.fillStyle = '#8B4513';
+    ctx.fillRect(250, MARIO_HEIGHT - 200, 100, 20);
+    ctx.fillRect(450, MARIO_HEIGHT - 250, 100, 20);
+    ctx.fillRect(700, MARIO_HEIGHT - 200, 100, 20);
+    ctx.fillRect(1000, MARIO_HEIGHT - 300, 100, 20);
+    
+    // Draw pipes
+    ctx.fillStyle = '#228B22';
+    ctx.fillRect(350, MARIO_HEIGHT - 200, 40, 200);
+    ctx.fillRect(750, MARIO_HEIGHT - 150, 40, 150);
+    ctx.fillStyle = '#32CD32';
+    ctx.fillRect(355, MARIO_HEIGHT - 200, 30, 20);
+    ctx.fillRect(755, MARIO_HEIGHT - 150, 30, 20);
+    
+    // Draw coins
+    marioCoins.forEach(coin => {
+      if (!coin.collected) {
+        ctx.fillStyle = '#FFD700';
+        ctx.beginPath();
+        ctx.arc(coin.x - marioCamera.x, coin.y, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#FFA500';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    });
+    
+    // Draw enemies
+    marioEnemies.forEach(enemy => {
+      if (enemy.alive) {
+        if (enemy.type === 'goomba') {
+          ctx.fillStyle = '#8B4513';
+          ctx.fillRect(enemy.x - marioCamera.x, enemy.y, MARIO_PLAYER_WIDTH, MARIO_PLAYER_HEIGHT);
+          // Eyes
+          ctx.fillStyle = '#000';
+          ctx.fillRect(enemy.x - marioCamera.x + 8, enemy.y + 8, 4, 4);
+          ctx.fillRect(enemy.x - marioCamera.x + 20, enemy.y + 8, 4, 4);
+        } else if (enemy.type === 'koopa') {
+          ctx.fillStyle = '#228B22';
+          ctx.fillRect(enemy.x - marioCamera.x, enemy.y, MARIO_PLAYER_WIDTH, MARIO_PLAYER_HEIGHT);
+          // Shell pattern
+          ctx.fillStyle = '#32CD32';
+          ctx.fillRect(enemy.x - marioCamera.x + 4, enemy.y + 4, MARIO_PLAYER_WIDTH - 8, MARIO_PLAYER_HEIGHT - 8);
+        }
+      }
+    });
+    
+    // Draw Mario
+    const marioX = marioPlayer.x - marioCamera.x;
+    const marioY = marioPlayer.y;
+    
+    if (marioPlayer.size === 'big') {
+      ctx.fillStyle = '#FF0000';
+      ctx.fillRect(marioX, marioY, MARIO_PLAYER_WIDTH, MARIO_PLAYER_HEIGHT);
+      ctx.fillStyle = '#0000FF';
+      ctx.fillRect(marioX, marioY - MARIO_PLAYER_HEIGHT, MARIO_PLAYER_WIDTH, MARIO_PLAYER_HEIGHT);
+    } else {
+      ctx.fillStyle = '#FF0000';
+      ctx.fillRect(marioX, marioY, MARIO_PLAYER_WIDTH, MARIO_PLAYER_HEIGHT);
+    }
+    
+    // Draw Mario's hat
+    ctx.fillStyle = '#8B4513';
+    ctx.fillRect(marioX + 4, marioY - 8, MARIO_PLAYER_WIDTH - 8, 8);
+    
+    // Draw Mario's face
+    ctx.fillStyle = '#FFE4B5';
+    ctx.fillRect(marioX + 8, marioY + 8, MARIO_PLAYER_WIDTH - 16, 12);
+    
+    // Draw Mario's eyes
+    ctx.fillStyle = '#000';
+    ctx.fillRect(marioX + 10, marioY + 10, 3, 3);
+    ctx.fillRect(marioX + 19, marioY + 10, 3, 3);
+    
+    // Draw Mario's mustache
+    ctx.fillStyle = '#8B4513';
+    ctx.fillRect(marioX + 12, marioY + 16, 8, 3);
+    
+    // Draw UI
+    ctx.fillStyle = '#000';
+    ctx.font = '20px Arial';
+    ctx.fillText(`Score: ${marioScore}`, 20, 30);
+    ctx.fillText(`Lives: ${marioLives}`, 20, 60);
+    ctx.fillText(`Time: ${Math.max(0, 60 - Math.floor(playTime))}`, 20, 90);
+  };
+
+  const marioUpdate = () => {
+    if (gameOver) return;
+    
+    // Update player physics
+    setMarioPlayer(prev => {
+      let newPlayer = { ...prev };
+      
+      // Apply gravity
+      if (!newPlayer.onGround) {
+        newPlayer.vy += MARIO_GRAVITY;
+      }
+      
+      // Update position
+      newPlayer.x += newPlayer.vx;
+      newPlayer.y += newPlayer.vy;
+      
+      // Ground collision
+      if (newPlayer.y >= MARIO_HEIGHT - MARIO_PLAYER_HEIGHT - 100) {
+        newPlayer.y = MARIO_HEIGHT - MARIO_PLAYER_HEIGHT - 100;
+        newPlayer.vy = 0;
+        newPlayer.onGround = true;
+      } else {
+        newPlayer.onGround = false;
+      }
+      
+      // Platform collisions
+      const platforms = [
+        { x: 250, y: MARIO_HEIGHT - 200, w: 100, h: 20 },
+        { x: 450, y: MARIO_HEIGHT - 250, w: 100, h: 20 },
+        { x: 700, y: MARIO_HEIGHT - 200, w: 100, h: 20 },
+        { x: 1000, y: MARIO_HEIGHT - 300, w: 100, h: 20 },
+      ];
+      
+      platforms.forEach(platform => {
+        if (newPlayer.x + MARIO_PLAYER_WIDTH > platform.x &&
+            newPlayer.x < platform.x + platform.w &&
+            newPlayer.y + MARIO_PLAYER_HEIGHT > platform.y &&
+            newPlayer.y + MARIO_PLAYER_HEIGHT < platform.y + platform.h + 10 &&
+            newPlayer.vy >= 0) {
+          newPlayer.y = platform.y - MARIO_PLAYER_HEIGHT;
+          newPlayer.vy = 0;
+          newPlayer.onGround = true;
+        }
+      });
+      
+      // Pipe collisions
+      const pipes = [
+        { x: 350, y: MARIO_HEIGHT - 200, w: 40, h: 200 },
+        { x: 750, y: MARIO_HEIGHT - 150, w: 40, h: 150 },
+      ];
+      
+      pipes.forEach(pipe => {
+        if (newPlayer.x + MARIO_PLAYER_WIDTH > pipe.x &&
+            newPlayer.x < pipe.x + pipe.w &&
+            newPlayer.y + MARIO_PLAYER_HEIGHT > pipe.y &&
+            newPlayer.y < pipe.y + pipe.h) {
+          // Collision from left
+          if (newPlayer.vx > 0) {
+            newPlayer.x = pipe.x - MARIO_PLAYER_WIDTH;
+          }
+          // Collision from right
+          if (newPlayer.vx < 0) {
+            newPlayer.x = pipe.x + pipe.w;
+          }
+          newPlayer.vx = 0;
+        }
+      });
+      
+      // Apply friction
+      newPlayer.vx *= 0.8;
+      
+      return newPlayer;
+    });
+    
+    // Update camera
+    setMarioCamera(prev => {
+      const targetX = Math.max(0, marioPlayer.x - MARIO_WIDTH / 2);
+      return { x: targetX };
+    });
+    
+    // Update enemies
+    setMarioEnemies(prev => prev.map(enemy => {
+      if (!enemy.alive) return enemy;
+      
+      let newEnemy = { ...enemy };
+      newEnemy.x += newEnemy.vx;
+      
+      // Ground collision for enemies
+      if (newEnemy.y >= MARIO_HEIGHT - MARIO_PLAYER_HEIGHT - 100) {
+        newEnemy.y = MARIO_HEIGHT - MARIO_PLAYER_HEIGHT - 100;
+      }
+      
+      // Platform collisions for enemies
+      const platforms = [
+        { x: 250, y: MARIO_HEIGHT - 200, w: 100, h: 20 },
+        { x: 450, y: MARIO_HEIGHT - 250, w: 100, h: 20 },
+        { x: 700, y: MARIO_HEIGHT - 200, w: 100, h: 20 },
+        { x: 1000, y: MARIO_HEIGHT - 300, w: 100, h: 20 },
+      ];
+      
+      platforms.forEach(platform => {
+        if (newEnemy.x + MARIO_PLAYER_WIDTH > platform.x &&
+            newEnemy.x < platform.x + platform.w &&
+            newEnemy.y + MARIO_PLAYER_HEIGHT > platform.y &&
+            newEnemy.y + MARIO_PLAYER_HEIGHT < platform.y + platform.h + 10) {
+          newEnemy.y = platform.y - MARIO_PLAYER_HEIGHT;
+        }
+      });
+      
+      // Turn around at edges
+      if (newEnemy.x <= 0 || newEnemy.x >= MARIO_LEVEL_WIDTH - MARIO_PLAYER_WIDTH) {
+        newEnemy.vx = -newEnemy.vx;
+      }
+      
+      return newEnemy;
+    }));
+    
+    // Check coin collisions
+    setMarioCoins(prev => prev.map(coin => {
+      if (coin.collected) return coin;
+      
+      if (marioPlayer.x + MARIO_PLAYER_WIDTH > coin.x &&
+          marioPlayer.x < coin.x + 24 &&
+          marioPlayer.y + MARIO_PLAYER_HEIGHT > coin.y &&
+          marioPlayer.y < coin.y + 24) {
+        setMarioScore(score => score + 200);
+        return { ...coin, collected: true };
+      }
+      return coin;
+    }));
+    
+    // Check enemy collisions
+    marioEnemies.forEach((enemy, index) => {
+      if (!enemy.alive) return;
+      
+      // Player stomping enemy
+      if (marioPlayer.x + MARIO_PLAYER_WIDTH > enemy.x &&
+          marioPlayer.x < enemy.x + MARIO_PLAYER_WIDTH &&
+          marioPlayer.y + MARIO_PLAYER_HEIGHT > enemy.y &&
+          marioPlayer.y + MARIO_PLAYER_HEIGHT < enemy.y + MARIO_PLAYER_HEIGHT + 10 &&
+          marioPlayer.vy > 0) {
+        setMarioEnemies(prev => prev.map((e, i) => 
+          i === index ? { ...e, alive: false } : e
+        ));
+        setMarioScore(score => score + 100);
+        setMarioPlayer(prev => ({ ...prev, vy: MARIO_JUMP_FORCE }));
+      }
+      
+      // Enemy hitting player
+      if (marioPlayer.x + MARIO_PLAYER_WIDTH > enemy.x &&
+          marioPlayer.x < enemy.x + MARIO_PLAYER_WIDTH &&
+          marioPlayer.y + MARIO_PLAYER_HEIGHT > enemy.y &&
+          marioPlayer.y < enemy.y + MARIO_PLAYER_HEIGHT) {
+        if (marioPlayer.size === 'big') {
+          setMarioPlayer(prev => ({ ...prev, size: 'small' }));
+        } else {
+          setMarioLives(prev => prev - 1);
+          if (marioLives <= 1) {
+            setGameOver(true);
+          } else {
+            // Reset player position
+            setMarioPlayer(prev => ({
+              ...prev,
+              x: 50,
+              y: MARIO_HEIGHT - MARIO_PLAYER_HEIGHT - 100,
+              vx: 0,
+              vy: 0
+            }));
+            setMarioCamera({ x: 0 });
+          }
+        }
+      }
+    });
+    
+    // Check if player fell off the world
+    if (marioPlayer.y > MARIO_HEIGHT) {
+      setMarioLives(prev => prev - 1);
+      if (marioLives <= 1) {
+        setGameOver(true);
+      } else {
+        setMarioPlayer(prev => ({
+          ...prev,
+          x: 50,
+          y: MARIO_HEIGHT - MARIO_PLAYER_HEIGHT - 100,
+          vx: 0,
+          vy: 0
+        }));
+        setMarioCamera({ x: 0 });
+      }
+    }
+  };
+
+  // Mario game loop
+  useEffect(() => {
+    if (!isPlaying || currentGameType !== 'mario') return;
+    
+    const interval = setInterval(() => {
+      marioUpdate();
+    }, 16);
+    
+    return () => clearInterval(interval);
+  }, [isPlaying, currentGameType, marioPlayer, marioEnemies, marioCoins, marioScore, marioLives, gameOver]);
+
+  // Mario rendering
+  useEffect(() => {
+    if (!isPlaying || currentGameType !== 'mario') return;
+    
+    const canvas = document.getElementById('mario-canvas') as HTMLCanvasElement;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    marioDraw(ctx);
+  }, [isPlaying, currentGameType, marioPlayer, marioCamera, marioEnemies, marioCoins, marioScore, marioLives]);
+
+  // Mario controls
+  useEffect(() => {
+    if (!isPlaying || currentGameType !== 'mario') return;
+    
+    const handleMarioKey = (e: KeyboardEvent) => {
+      if (gameOver) return;
+      
+      setMarioPlayer(prev => {
+        let newPlayer = { ...prev };
+        
+        switch (e.key) {
+          case 'ArrowLeft':
+          case 'a':
+          case 'A':
+            newPlayer.vx = -MARIO_MOVE_SPEED;
+            newPlayer.facing = -1;
+            break;
+          case 'ArrowRight':
+          case 'd':
+          case 'D':
+            newPlayer.vx = MARIO_MOVE_SPEED;
+            newPlayer.facing = 1;
+            break;
+          case 'ArrowUp':
+          case 'w':
+          case 'W':
+          case ' ':
+            if (newPlayer.onGround) {
+              newPlayer.vy = MARIO_JUMP_FORCE;
+              newPlayer.onGround = false;
+            }
+            break;
+        }
+        
+        return newPlayer;
+      });
+    };
+    
+    document.addEventListener('keydown', handleMarioKey);
+    return () => document.removeEventListener('keydown', handleMarioKey);
+  }, [isPlaying, currentGameType, gameOver]);
+
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -3564,6 +3993,32 @@ export function ArcadeGamesPage({ onGameSelect }: ArcadeGamesPageProps) {
                             </div>
                             <div className="pixel-text text-sm neon-text-yellow">
                               {mazeWin ? "🏆 YOU ESCAPED! Congratulations!" : "Navigate through the maze to the green goal!"}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {currentGameType === 'mario' && (
+                        <div className="flex flex-col items-center justify-center w-full h-full">
+                          <canvas 
+                            id="mario-canvas"
+                            width={MARIO_WIDTH} 
+                            height={MARIO_HEIGHT} 
+                            style={{ 
+                              backgroundColor: "#87CEEB", 
+                              border: "4px solid #FF0000",
+                              borderRadius: "12px",
+                              boxShadow: "0 0 30px #FF0000, inset 0 0 20px rgba(255,0,0,0.2)",
+                              maxWidth: "90vw",
+                              maxHeight: "90vh"
+                            }} 
+                          />
+                          <div className="mt-6 text-center">
+                            <div className="pixel-text text-lg neon-text-red mb-3">
+                              🍄 ARROW KEYS: MOVE & JUMP • STOMP ENEMIES • COLLECT COINS!
+                            </div>
+                            <div className="pixel-text text-sm neon-text-yellow">
+                              {gameOver ? "🏆 GAME OVER! Try again!" : "Jump on enemies to defeat them and collect coins!"}
                             </div>
                           </div>
                         </div>

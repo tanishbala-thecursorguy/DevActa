@@ -1,156 +1,173 @@
-import { useEffect } from "react";
-import { Button } from "./ui/button";
-import logoImage from "figma:asset/32a9f97ebfa773dabe97368d7e406f5ed1e26205.png";
+"use client";
+
+import { cn } from "../lib/utils";
+import { ReactNode, useEffect, useRef } from "react";
 
 interface FuturisticLandingPageProps {
   onGetStarted: () => void;
 }
 
-export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPageProps) {
+interface VerticalMarqueeProps {
+  children: ReactNode;
+  pauseOnHover?: boolean;
+  reverse?: boolean;
+  className?: string;
+  speed?: number;
+  onItemsRef?: (items: HTMLElement[]) => void;
+}
+
+function VerticalMarquee({
+  children,
+  pauseOnHover = false,
+  reverse = false,
+  className,
+  speed = 30,
+  onItemsRef,
+}: VerticalMarqueeProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    // Create subtle animated dots
-    const container = document.getElementById('landing-dots-container');
-    if (!container) return;
-
-    for (let i = 0; i < 30; i++) {
-      const dot = document.createElement('div');
-      dot.className = 'landing-dot';
-      dot.style.left = `${Math.random() * 100}%`;
-      dot.style.top = `${Math.random() * 100}%`;
-      dot.style.animationDelay = `${Math.random() * 5}s`;
-      dot.style.animationDuration = `${Math.random() * 3 + 3}s`;
-      container.appendChild(dot);
+    if (onItemsRef && containerRef.current) {
+      const items = Array.from(containerRef.current.querySelectorAll('.marquee-item')) as HTMLElement[];
+      onItemsRef(items);
     }
-
-    return () => {
-      if (container) {
-        container.innerHTML = '';
-      }
-    };
-  }, []);
-
-  const features = [
-    { 
-      icon: "🎮", 
-      title: "Game Zone for Developers",
-      text: "Play retro arcade games, compete in challenges, and get discovered by top companies looking for talented developers",
-      delay: 0.2 
-    },
-    { 
-      icon: "🏆", 
-      title: "Compete in Global Hackathons",
-      text: "Join exciting hackathons with real prizes, build innovative projects, and showcase your skills to the world",
-      delay: 0.4 
-    },
-    { 
-      icon: "👥", 
-      title: "Meet New People from Communities",
-      text: "Connect with developers worldwide, join communities, share knowledge, and grow your professional network",
-      delay: 0.6 
-    },
-    { 
-      icon: "⚔️", 
-      title: "Take on Coding Challenges",
-      text: "Test your skills in 1v1 battles, team challenges, and prove your expertise on the leaderboard",
-      delay: 0.8 
-    },
-  ];
+  }, [onItemsRef]);
 
   return (
-    <div className="professional-landing min-h-screen relative overflow-hidden">
-      {/* Subtle Grid Background */}
-      <div className="landing-grid-background"></div>
-      
-      {/* Animated Dots */}
-      <div id="landing-dots-container" className="landing-dots-container"></div>
+    <div
+      ref={containerRef}
+      className={cn(
+        "group flex flex-col overflow-hidden",
+        className
+      )}
+      style={
+        {
+          "--duration": `${speed}s`,
+        } as React.CSSProperties
+      }
+    >
+      <div
+        className={cn(
+          "flex shrink-0 flex-col animate-marquee-vertical",
+          reverse && "[animation-direction:reverse]",
+          pauseOnHover && "group-hover:[animation-play-state:paused]"
+        )}
+      >
+        {children}
+      </div>
+      <div
+        className={cn(
+          "flex shrink-0 flex-col animate-marquee-vertical",
+          reverse && "[animation-direction:reverse]",
+          pauseOnHover && "group-hover:[animation-play-state:paused]"
+        )}
+        aria-hidden="true"
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
 
-      {/* Subtle Gradient Overlay */}
-      <div className="landing-gradient-overlay"></div>
+const marqueeItems = [
+  "Game Zone for Developers",
+  "Compete in Global Hackathons",
+  "Meet New People from Communities",
+  "Take on Coding Challenges",
+  "Get Hired by Completing Challenges",
+  "Show Your Startup",
+  "Find Your Startup Team",
+  "Post and Earn",
+  "Build Devohood",
+];
 
-      {/* Main Content */}
-      <div className="relative z-10 min-h-screen flex items-center">
-        <div className="max-w-7xl mx-auto px-6 py-12 w-full">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            
-            {/* Left Side - Logo & Branding */}
-            <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
-              <div className="relative mb-8">
-                {/* Logo */}
-                <div className="logo-professional">
-                  <img 
-                    src={logoImage} 
-                    alt="DevActa Logo" 
-                    className="w-48 h-48 object-contain hover-lift"
-                  />
-                </div>
-              </div>
+export function FuturisticLandingPage({ onGetStarted }: FuturisticLandingPageProps) {
+  const marqueeRef = useRef<HTMLDivElement>(null);
 
-              {/* Brand Title */}
-              <div className="mb-6">
-                <h1 className="professional-title text-6xl lg:text-7xl mb-4">
-                  Dev<span className="text-primary">Acta</span>
-                </h1>
-                <div className="professional-subtitle text-xl text-gray-600">
-                  Developer Community Platform
-                </div>
-              </div>
+  useEffect(() => {
+    const marqueeContainer = marqueeRef.current;
+    if (!marqueeContainer) return;
 
-              {/* Tagline */}
-              <p className="text-2xl text-gray-700 mb-8 max-w-lg leading-relaxed">
-                Where developers <span className="text-primary font-semibold">compete</span>, 
-                {' '}<span className="text-primary font-semibold">build</span>, and 
-                {' '}<span className="text-primary font-semibold">grow</span> together
-              </p>
+    const updateOpacity = () => {
+      const items = marqueeContainer.querySelectorAll('.marquee-item');
+      const containerRect = marqueeContainer.getBoundingClientRect();
+      const centerY = containerRect.top + containerRect.height / 2;
 
-              {/* CTA Button */}
-              <div className="professional-cta">
-                <Button
-                  onClick={onGetStarted}
-                  className="professional-button-cta text-xl px-12 py-6"
-                  size="lg"
-                >
-                  Get Started
-                  <svg className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
-                </Button>
-                <p className="text-sm text-gray-500 mt-4">
-                  Join thousands of developers worldwide
-                </p>
-              </div>
+      items.forEach((item) => {
+        const itemRect = item.getBoundingClientRect();
+        const itemCenterY = itemRect.top + itemRect.height / 2;
+        const distance = Math.abs(centerY - itemCenterY);
+        const maxDistance = containerRect.height / 2;
+        const normalizedDistance = Math.min(distance / maxDistance, 1);
+        const opacity = 1 - normalizedDistance * 0.75;
+        (item as HTMLElement).style.opacity = opacity.toString();
+      });
+    };
+
+    const animationFrame = () => {
+      updateOpacity();
+      requestAnimationFrame(animationFrame);
+    };
+
+    const frame = requestAnimationFrame(animationFrame);
+
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-6 py-12 overflow-hidden">
+      <div className="w-full max-w-7xl animate-fade-in-up">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-center">
+          {/* Left Content */}
+          <div className="space-y-8 max-w-xl">
+            <div className="flex items-center gap-4 animate-fade-in-up">
+              <img 
+                src="https://github.com/user-attachments/assets/a11e2ad4-3e0b-43c1-9e6d-cc42e914f5d1" 
+                alt="DevActa Logo" 
+                className="w-16 h-16 object-contain"
+              />
+              <span className="text-3xl font-bold">DevActa</span>
             </div>
-
-            {/* Right Side - Features */}
-            <div className="space-y-6">
-              {features.map((feature, index) => (
-                <div
-                  key={index}
-                  className="professional-feature-card"
-                  style={{ animationDelay: `${feature.delay}s` }}
-                >
-                  <div className="flex items-start space-x-4">
-                    <div className="professional-feature-icon">
-                      <span className="text-4xl">{feature.icon}</span>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                        {feature.title}
-                      </h3>
-                      <p className="text-gray-600 leading-relaxed">
-                        {feature.text}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-medium leading-tight tracking-tight text-foreground animate-fade-in-up [animation-delay:200ms]">
+              DevActa
+            </h1>
+            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed animate-fade-in-up [animation-delay:400ms]">
+              Where developers compete, build, and grow together. Join thousands of developers worldwide.
+            </p>
+            <div className="flex flex-wrap gap-4 animate-fade-in-up [animation-delay:600ms]">
+              <button 
+                onClick={onGetStarted}
+                className="group relative px-8 py-4 bg-foreground text-background rounded-md font-medium overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg"
+              >
+                <span className="relative z-10">Get Started</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
+              </button>
             </div>
+            <p className="text-sm text-muted-foreground/60 animate-fade-in-up [animation-delay:800ms]">
+              Powered by Acta
+            </p>
           </div>
 
-          {/* Footer */}
-          <div className="absolute bottom-8 left-0 right-0 text-center">
-            <p className="text-sm text-gray-500">
-              Powered by <span className="text-primary font-semibold">Acta</span>
-            </p>
+          {/* Right Marquee */}
+          <div ref={marqueeRef} className="relative h-[600px] lg:h-[700px] flex items-center justify-center animate-fade-in-up [animation-delay:400ms]">
+            <div className="relative w-full h-full">
+              <VerticalMarquee speed={20} className="h-full">
+                {marqueeItems.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-light tracking-tight py-8 marquee-item"
+                  >
+                    {item}
+                  </div>
+                ))}
+              </VerticalMarquee>
+              
+              {/* Top vignette */}
+              <div className="pointer-events-none absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-background via-background/50 to-transparent z-10"></div>
+              
+              {/* Bottom vignette */}
+              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-background via-background/50 to-transparent z-10"></div>
+            </div>
           </div>
         </div>
       </div>

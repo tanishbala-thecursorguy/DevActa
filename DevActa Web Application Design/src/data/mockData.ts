@@ -100,7 +100,8 @@ export const mockGames = [
   { id: 12, title: "2048", description: "Merge tiles to 2048", thumbnail: "🔢", difficulty: "Medium", time: "15-25 min", reward: 16 },
   { id: 13, title: "Jump Dino", description: "Jump over obstacles", thumbnail: "🦖", difficulty: "Easy", time: "5-10 min", reward: 8 },
   { id: 14, title: "Memory", description: "Match all the pairs", thumbnail: "🧠", difficulty: "Easy", time: "5-10 min", reward: 10 },
-  { id: 15, title: "Maze Run", description: "Find your way out", thumbnail: "🌀", difficulty: "Medium", time: "10-15 min", reward: 14 }
+  { id: 15, title: "Maze Run", description: "Find your way out", thumbnail: "🌀", difficulty: "Medium", time: "10-15 min", reward: 14 },
+  { id: 16, title: "Mario", description: "Classic platform adventure", thumbnail: "🍄", difficulty: "Medium", time: "10-15 min", reward: 16 }
 ];
 
 export const currentUser = mockUsers[0];
