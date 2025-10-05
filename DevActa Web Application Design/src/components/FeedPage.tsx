@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -10,21 +10,58 @@ interface FeedPageProps {
   onPageChange: (page: string) => void;
 }
 
+interface Post {
+  id: number;
+  title: string;
+  description: string;
+  userId: number;
+  github: string;
+  reactions: { neutral: number; numb: number; happy: number };
+  reviews: any[];
+  userReaction?: 'neutral' | 'numb' | 'happy' | null;
+}
+
 export function FeedPage({ onPageChange }: FeedPageProps) {
   const [postDialogOpen, setPostDialogOpen] = useState(false);
-  const [posts, setPosts] = useState(mockRepos);
+  const [posts, setPosts] = useState<Post[]>(mockRepos.map(post => ({ ...post, userReaction: null })));
 
   const handleNewPost = (data: { title: string; description: string; githubLink: string }) => {
-    const newPost = {
+    const newPost: Post = {
       id: posts.length + 1,
       title: data.title,
       description: data.description,
       userId: currentUser.id,
       github: data.githubLink,
       reactions: { neutral: 0, numb: 0, happy: 0 },
-      reviews: []
+      reviews: [],
+      userReaction: null
     };
     setPosts([newPost, ...posts]);
+  };
+
+  const handleReaction = (postId: number, reactionType: 'neutral' | 'numb' | 'happy') => {
+    setPosts(posts.map(post => {
+      if (post.id === postId) {
+        const newPost = { ...post };
+        
+        // Remove previous reaction if exists
+        if (post.userReaction) {
+          newPost.reactions[post.userReaction] = Math.max(0, newPost.reactions[post.userReaction] - 1);
+        }
+        
+        // If clicking same reaction, remove it
+        if (post.userReaction === reactionType) {
+          newPost.userReaction = null;
+        } else {
+          // Add new reaction
+          newPost.reactions[reactionType] = newPost.reactions[reactionType] + 1;
+          newPost.userReaction = reactionType;
+        }
+        
+        return newPost;
+      }
+      return post;
+    }));
   };
 
   const getReactionEmoji = (type: string) => {
@@ -131,15 +168,36 @@ export function FeedPage({ onPageChange }: FeedPageProps) {
                       {/* Reactions */}
                       <div className="border-t border-border pt-4">
                         <div className="flex items-center space-x-6">
-                          <button className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors">
+                          <button 
+                            onClick={() => handleReaction(repo.id, 'neutral')}
+                            className={`flex items-center space-x-2 transition-all ${
+                              repo.userReaction === 'neutral' 
+                                ? 'text-foreground scale-110' 
+                                : 'text-muted-foreground hover:text-foreground hover:scale-105'
+                            }`}
+                          >
                             <span className="text-lg">😐</span>
                             <span>{repo.reactions.neutral}</span>
                           </button>
-                          <button className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors">
+                          <button 
+                            onClick={() => handleReaction(repo.id, 'numb')}
+                            className={`flex items-center space-x-2 transition-all ${
+                              repo.userReaction === 'numb' 
+                                ? 'text-foreground scale-110' 
+                                : 'text-muted-foreground hover:text-foreground hover:scale-105'
+                            }`}
+                          >
                             <span className="text-lg">😶</span>
                             <span>{repo.reactions.numb}</span>
                           </button>
-                          <button className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors">
+                          <button 
+                            onClick={() => handleReaction(repo.id, 'happy')}
+                            className={`flex items-center space-x-2 transition-all ${
+                              repo.userReaction === 'happy' 
+                                ? 'text-foreground scale-110' 
+                                : 'text-muted-foreground hover:text-foreground hover:scale-105'
+                            }`}
+                          >
                             <span className="text-lg">☻</span>
                             <span>{repo.reactions.happy}</span>
                           </button>
